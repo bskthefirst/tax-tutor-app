@@ -1,0 +1,8 @@
+__pycache__/
+*.py[cod]
+.DS_Store
+
+# Local study/runtime artifacts
+data/cache/
+data/codex-empty-workdir/
+data/study_state.json

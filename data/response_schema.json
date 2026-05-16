@@ -1,0 +1,89 @@
+{
+  "type": "object",
+  "properties": {
+    "card_type": {
+      "type": "string"
+    },
+    "title": {
+      "type": "string"
+    },
+    "subtitle": {
+      "type": "string"
+    },
+    "intro": {
+      "type": "string"
+    },
+    "teaching_points": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "worked_example": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "quiz_question": {
+      "type": "string"
+    },
+    "quiz_choices": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "quiz_answer": {
+      "type": "string"
+    },
+    "memory_trick": {
+      "type": "string"
+    },
+    "next_step": {
+      "type": "string"
+    },
+    "citations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "chunk_id": {
+            "type": "string"
+          },
+          "chapter_number": {
+            "type": "integer"
+          },
+          "pages": {
+            "type": "string"
+          },
+          "why_this_chunk": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "chunk_id",
+          "chapter_number",
+          "pages",
+          "why_this_chunk"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "card_type",
+    "title",
+    "subtitle",
+    "intro",
+    "teaching_points",
+    "worked_example",
+    "quiz_question",
+    "quiz_choices",
+    "quiz_answer",
+    "memory_trick",
+    "next_step",
+    "citations"
+  ],
+  "additionalProperties": false
+}

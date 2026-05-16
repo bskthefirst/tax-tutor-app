@@ -1,0 +1,150 @@
+{
+  "type": "object",
+  "properties": {
+    "card_type": {
+      "type": "string"
+    },
+    "title": {
+      "type": "string"
+    },
+    "subtitle": {
+      "type": "string"
+    },
+    "intro": {
+      "type": "string"
+    },
+    "scope_note": {
+      "type": "string"
+    },
+    "teaching_points": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "worked_example": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "flashcards": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "front": {
+            "type": "string"
+          },
+          "back": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "front",
+          "back"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "quiz_questions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "prompt": {
+            "type": "string"
+          },
+          "hint": {
+            "type": "string"
+          },
+          "options": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "label": {
+                  "type": "string"
+                },
+                "text": {
+                  "type": "string"
+                },
+                "why": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "label",
+                "text",
+                "why"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "correct_option": {
+            "type": "string"
+          },
+          "study_answer": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "prompt",
+          "hint",
+          "options",
+          "correct_option",
+          "study_answer"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "memory_trick": {
+      "type": "string"
+    },
+    "next_step": {
+      "type": "string"
+    },
+    "citations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "chunk_id": {
+            "type": "string"
+          },
+          "chapter_number": {
+            "type": "integer"
+          },
+          "pages": {
+            "type": "string"
+          },
+          "why_this_chunk": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "chunk_id",
+          "chapter_number",
+          "pages",
+          "why_this_chunk"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "card_type",
+    "title",
+    "subtitle",
+    "intro",
+    "scope_note",
+    "teaching_points",
+    "worked_example",
+    "flashcards",
+    "quiz_questions",
+    "memory_trick",
+    "next_step",
+    "citations"
+  ],
+  "additionalProperties": false
+}
