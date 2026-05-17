@@ -7,6 +7,7 @@ import os
 import re
 import shutil
 import subprocess
+import sys
 import tempfile
 import threading
 import urllib.error
@@ -1858,6 +1859,7 @@ class TaxTutorEngine:
         if cache_path and cache_path.exists():
             return json.loads(cache_path.read_text(encoding="utf-8"))
 
+        provider_error: str | None = None
         api_key = os.environ.get("OPENCODE_API_KEY", "").strip()
         if api_key:
             try:
@@ -1865,12 +1867,13 @@ class TaxTutorEngine:
                 if cache_path:
                     cache_path.write_text(json.dumps(response, indent=2), encoding="utf-8")
                 return response
-            except Exception:
+            except Exception as exc:
                 # Keep current behavior: degrade gracefully to local/codex fallback.
-                pass
+                provider_error = f"{type(exc).__name__}: {exc}"
+                print(f"[tax-tutor] OpenCode provider failed, using fallback. {provider_error}", file=sys.stderr)
 
         if shutil.which("codex") is None:
-            return self._fallback_response("local_mode", schema_path)
+            return self._fallback_response(provider_error or "local_mode", schema_path)
 
         success = False
         try:
