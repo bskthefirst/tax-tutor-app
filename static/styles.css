@@ -2589,6 +2589,12 @@ body.page-mode-study .ask-card {
   gap: 12px;
 }
 
+.mistake-taxonomy-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .flashcard-front {
   border-radius: 18px;
   background: rgba(248, 250, 253, 0.98);

@@ -36,6 +36,7 @@ const examCenter = document.getElementById("examCenter");
 const mistakeNotebook = document.getElementById("mistakeNotebook");
 const questionForm = document.getElementById("questionForm");
 const questionInput = document.getElementById("questionInput");
+const teachBackButton = document.getElementById("teachBackButton");
 const statusStrip = document.getElementById("statusStrip");
 const startOverButton = document.getElementById("startOverButton");
 const weeklyPlan = document.getElementById("weeklyPlan");
@@ -812,9 +813,16 @@ function renderMistakeNotebook(appState) {
     return;
   }
 
+  const taxonomyCounts = notebook.taxonomy_counts || {};
+  const taxonomySummary = Object.entries(taxonomyCounts)
+    .sort((a, b) => b[1] - a[1])
+    .map(([label, count]) => `<span class="mini-pill">${escapeHtml(toTitleCase(label))}: ${escapeHtml(count)}</span>`)
+    .join("");
+
   mistakeNotebook.innerHTML = `
     <div class="mistake-shell">
       <p class="plan-note">${escapeHtml(notebook.unresolved_count)} questions still need review.</p>
+      ${taxonomySummary ? `<div class="mistake-taxonomy-row">${taxonomySummary}</div>` : ""}
       <div class="mistake-list">
         ${notebook.items
           .map(
@@ -824,6 +832,7 @@ function renderMistakeNotebook(appState) {
                   <strong>Chapter ${escapeHtml(item.chapter_number)} · ${escapeHtml(item.lesson_title)}</strong>
                   <span>${escapeHtml(item.selected_option)} -> ${escapeHtml(item.correct_option)}</span>
                 </summary>
+                <p><strong>Type:</strong> ${escapeHtml(toTitleCase(item.taxonomy || "uncategorized"))}</p>
                 <p class="mistake-prompt">${escapeHtml(item.prompt)}</p>
                 <p><strong>Why your choice was off:</strong> ${escapeHtml(item.why_selected_wrong)}</p>
                 <p><strong>Why the right choice works:</strong> ${escapeHtml(item.why_correct_right)}</p>
@@ -2302,11 +2311,14 @@ async function runAction(action, payload = {}) {
         "complete_and_continue",
         "review_session",
         "build_exam",
+        "build_diagnostic",
+        "build_workpaper",
         "quiz_me",
         "explain_simpler",
         "another_example",
         "submit_quiz",
         "ask_question",
+        "teach_back",
       ].includes(action)
     ) {
       state.pageMode = "study";
@@ -2337,6 +2349,10 @@ async function runAction(action, payload = {}) {
       state.lessonStage = "learn";
       state.lessonStageLessonId = data.state?.last_card?.lesson_id || data.state?.current_lesson?.lesson_id || null;
       clearCompletionScreen();
+    } else if (action === "teach_back") {
+      state.lessonStage = "learn";
+      state.lessonStageLessonId = data.state?.last_card?.lesson_id || data.state?.current_lesson?.lesson_id || null;
+      clearCompletionScreen();
     } else if (action === "quiz_me") {
       const lessonId = data.state?.last_card?.lesson_id || data.state?.current_lesson?.lesson_id || null;
       state.lessonStage = "quiz";
@@ -2351,7 +2367,7 @@ async function runAction(action, payload = {}) {
       state.lessonStage = "learn";
       state.lessonStageLessonId = data.state?.last_card?.lesson_id || null;
       clearCompletionScreen();
-    } else if (action === "build_exam") {
+    } else if (["build_exam", "build_diagnostic", "build_workpaper"].includes(action)) {
       state.lessonStage = "quiz";
       state.lessonStageLessonId = data.state?.last_card?.lesson_id || null;
       state.quizQuestionIndex = 0;
@@ -2402,11 +2418,14 @@ function actionStatusText(action) {
     complete_and_continue: "Saving your progress and loading the next lesson…",
     review_session: "Building your weekly review session…",
     build_exam: "Building a focused exam drill from the textbook…",
+    build_diagnostic: "Building your chapter diagnostic pretest…",
+    build_workpaper: "Building a tax workpaper drill…",
     quiz_me: "Preparing a sharper 3-question check…",
     explain_simpler: "Rewriting this lesson in simpler language…",
     another_example: "Building a fresh worked example…",
     submit_quiz: "Checking your answers…",
     ask_question: "Looking through the book for the best answer…",
+    teach_back: "Grading your teach-back against the lesson concepts…",
     rate_flashcard: "Updating your flashcard schedule…",
     set_midterm_mode: "Updating your chapter range…",
     set_weekly_goal: "Rebuilding your weekly plan…",
@@ -2441,7 +2460,7 @@ function successStatusForAction(action, appState) {
       kind: "success",
     };
   }
-  if (action === "build_exam") {
+  if (["build_exam", "build_diagnostic", "build_workpaper"].includes(action)) {
     return {
       message: "Exam drill ready.",
       kind: "success",
@@ -2641,6 +2660,17 @@ questionForm.addEventListener("submit", (event) => {
   }
   runAction("ask_question", { question });
 });
+
+if (teachBackButton) {
+  teachBackButton.addEventListener("click", () => {
+    const responseText = questionInput.value.trim();
+    if (!responseText) {
+      setStatus("Please type your teach-back explanation first.", "error");
+      return;
+    }
+    runAction("teach_back", { response_text: responseText });
+  });
+}
 
 midtermForm.addEventListener("submit", (event) => {
   event.preventDefault();

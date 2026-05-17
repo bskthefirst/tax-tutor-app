@@ -617,6 +617,10 @@ class TaxTutorEngine:
             elif action == "build_exam":
                 exam_mode = str(payload.get("exam_mode", "")).strip()
                 card = self._build_exam_card(state, exam_mode)
+            elif action == "build_diagnostic":
+                card = self._build_exam_card(state, "diagnostic_pretest")
+            elif action == "build_workpaper":
+                card = self._build_exam_card(state, "workpaper_drill")
             elif action == "submit_quiz":
                 lesson = self._require_current_lesson(state)
                 answers = payload.get("answers") or []
@@ -627,6 +631,11 @@ class TaxTutorEngine:
                     raise ValueError("Please enter a question first.")
                 current = self.lesson_lookup.get(state.get("current_lesson_id", ""))
                 card = self._build_answer_card(question, current, state)
+            elif action == "teach_back":
+                response_text = str(payload.get("response_text", "")).strip()
+                if not response_text:
+                    raise ValueError("Please enter your teach-back explanation first.")
+                card = self._build_teach_back_card(state, response_text)
             elif action == "rate_flashcard":
                 card_id = str(payload.get("card_id", "")).strip()
                 rating = str(payload.get("rating", "")).strip().lower()
@@ -1207,6 +1216,13 @@ class TaxTutorEngine:
                     "disabled": False,
                 },
                 {
+                    "exam_mode": "diagnostic_pretest",
+                    "title": "Chapter Diagnostic",
+                    "detail": f"Baseline check before deep study in Chapter {current_chapter}.",
+                    "cta_label": "Start diagnostic",
+                    "disabled": False,
+                },
+                {
                     "exam_mode": "missed_only",
                     "title": "Missed Questions Only",
                     "detail": unresolved_count
@@ -1216,10 +1232,24 @@ class TaxTutorEngine:
                     "disabled": unresolved_count == 0,
                 },
                 {
+                    "exam_mode": "workpaper_drill",
+                    "title": "Workpaper Drill",
+                    "detail": "Practice structured tax calculations step-by-step.",
+                    "cta_label": "Start workpaper drill",
+                    "disabled": False,
+                },
+                {
                     "exam_mode": "timed_drill",
                     "title": "Timed 10-Min Drill",
                     "detail": "Short pressure round to practice exam pacing.",
                     "cta_label": "Start timed drill",
+                    "disabled": False,
+                },
+                {
+                    "exam_mode": "cumulative_timed",
+                    "title": "Cumulative Timed Set",
+                    "detail": "Mixed cumulative set across active chapters under time pressure.",
+                    "cta_label": "Start cumulative set",
                     "disabled": False,
                 },
             ],
@@ -1232,6 +1262,10 @@ class TaxTutorEngine:
 
     def _build_mistake_notebook(self, state: dict[str, Any]) -> dict[str, Any]:
         unresolved = self._unresolved_mistakes(state)
+        taxonomy_counts: dict[str, int] = {}
+        for entry in unresolved:
+            category = str(entry.get("taxonomy", "uncategorized"))
+            taxonomy_counts[category] = taxonomy_counts.get(category, 0) + 1
         items = [
             {
                 "entry_id": entry["entry_id"],
@@ -1244,12 +1278,14 @@ class TaxTutorEngine:
                 "correct_option": entry["correct_option"],
                 "why_selected_wrong": entry["why_selected_wrong"],
                 "why_correct_right": entry["why_correct_right"],
+                "taxonomy": entry.get("taxonomy", "uncategorized"),
                 "created_at": entry["created_at"],
             }
             for entry in unresolved[:8]
         ]
         return {
             "unresolved_count": len(unresolved),
+            "taxonomy_counts": taxonomy_counts,
             "items": items,
         }
 
@@ -1379,11 +1415,41 @@ class TaxTutorEngine:
             query = " ".join(lesson.title for lesson in lessons[:8]) + " timed drill exam pacing"
             extra_note = "Make the questions concise and exam-like."
             timed_minutes = 10
+            question_target = 5
+        elif exam_mode == "diagnostic_pretest":
+            lessons = [lesson for lesson in self.chapter_lessons[current_lesson.chapter_number] if self._lesson_in_scope(lesson, state)][:12]
+            chapter_numbers = {current_lesson.chapter_number}
+            title = f"Chapter {current_lesson.chapter_number} Diagnostic"
+            subtitle = "Pretest your baseline before deeper practice"
+            query = f"{current_lesson.chapter_title} diagnostic pretest baseline misconceptions"
+            extra_note = "Focus on baseline misconceptions and include broad coverage."
+            timed_minutes = 8
+            question_target = 5
+        elif exam_mode == "workpaper_drill":
+            lessons = [lesson for lesson in self._active_lessons(state) if lesson.chapter_number == current_lesson.chapter_number][:16]
+            chapter_numbers = {current_lesson.chapter_number}
+            title = "Workpaper Drill"
+            subtitle = f"Structured tax computation practice for Chapter {current_lesson.chapter_number}"
+            query = f"{current_lesson.chapter_title} tax computation worksheet basis rate deduction credit"
+            extra_note = "Make each question a mini workpaper: identify given data, choose method, compute result."
+            timed_minutes = None
+            question_target = 5
+        elif exam_mode == "cumulative_timed":
+            lessons = self._active_lessons(state)[:36]
+            chapter_numbers = {lesson.chapter_number for lesson in lessons}
+            title = "Cumulative Timed Set"
+            subtitle = "Cross-chapter mixed set"
+            query = " ".join(lesson.title for lesson in lessons[:14]) + " cumulative mixed timed tax exam"
+            extra_note = "Mix chapters broadly. Include conceptual and computational items."
+            timed_minutes = 20
+            question_target = 5
         else:
             raise ValueError("Choose a valid exam mode first.")
+        if "question_target" not in locals():
+            question_target = 5
 
         chunks = self.search_chunks(query, chapter_numbers=chapter_numbers, top_k=6)
-        prompt = self._exam_prompt(title, subtitle, lessons, chunks, extra_note, timed_minutes)
+        prompt = self._exam_prompt(title, subtitle, lessons, chunks, extra_note, timed_minutes, question_target=question_target)
         response = self._run_structured_model(
             prompt,
             self.lesson_schema_path,
@@ -1663,6 +1729,7 @@ class TaxTutorEngine:
         chunks: list[dict[str, Any]],
         extra_note: str,
         timed_minutes: int | None,
+        question_target: int = 5,
     ) -> str:
         lesson_list = "\n".join(f"- {lesson.title}" for lesson in lessons[:12])
         return "\n".join(
@@ -1672,7 +1739,7 @@ class TaxTutorEngine:
                 "Create an exam-style practice card.",
                 "- The student is still a beginner, but this should feel more like a checkpoint than a lesson.",
                 "- Make the quiz the star. The teaching points should be short and tactical.",
-                "- Always produce exactly 3 flashcards and exactly 3 multiple-choice questions unless the context naturally supports 4 or 5.",
+                f"- Always produce exactly 3 flashcards and exactly {question_target} multiple-choice questions.",
                 "- Each question must have exactly 5 options labeled A, B, C, D, and E.",
                 "- Every option must include a short `why` explanation saying why that option is right or wrong.",
                 "- Each question must include one `correct_option` and a short `study_answer`.",
@@ -2185,6 +2252,7 @@ class TaxTutorEngine:
                     notebook_by_id[entry_id]["resolved"] = True
                     notebook_by_id[entry_id]["resolved_at"] = self._now()
                 continue
+            taxonomy = self._classify_mistake_taxonomy(question, item)
             notebook_by_id[entry_id] = {
                 "entry_id": entry_id,
                 "lesson_id": (
@@ -2228,6 +2296,7 @@ class TaxTutorEngine:
                 "correct_text": item.get("correct_text", ""),
                 "why_selected_wrong": item.get("why_selected_wrong", ""),
                 "why_correct_right": item.get("why_correct_right", ""),
+                "taxonomy": taxonomy,
                 "created_at": self._now(),
                 "resolved": False,
                 "resolved_at": None,
@@ -2264,18 +2333,29 @@ class TaxTutorEngine:
                 "back": flashcard["back"],
                 "reps": 0,
                 "interval_days": 0,
+                "ease_factor": 2.3,
                 "due_at": now,
                 "last_reviewed_at": None,
             }
 
     def _due_flashcards(self, state: dict[str, Any]) -> list[dict[str, Any]]:
         now = self._now_dt()
+        unresolved_by_lesson: dict[str, int] = {}
+        for entry in self._unresolved_mistakes(state):
+            lesson_id = entry.get("reopen_lesson_id") or entry.get("lesson_id")
+            if lesson_id:
+                unresolved_by_lesson[lesson_id] = unresolved_by_lesson.get(lesson_id, 0) + 1
         due: list[dict[str, Any]] = []
         for flashcard in state["flashcards"].values():
             due_at = datetime.fromisoformat(flashcard["due_at"])
             if due_at <= now:
-                due.append(flashcard)
-        due.sort(key=lambda item: item["due_at"])
+                due_item = dict(flashcard)
+                lesson_penalty = unresolved_by_lesson.get(flashcard.get("lesson_id", ""), 0)
+                reps = int(flashcard.get("reps", 0) or 0)
+                age_hours = max(0.0, (now - due_at).total_seconds() / 3600.0)
+                due_item["_priority"] = (lesson_penalty * 8.0) + age_hours - (reps * 0.5)
+                due.append(due_item)
+        due.sort(key=lambda item: item.get("_priority", 0), reverse=True)
         return due
 
     def _next_due_flashcard(self, state: dict[str, Any]) -> dict[str, Any] | None:
@@ -2302,25 +2382,154 @@ class TaxTutorEngine:
         flashcard = state["flashcards"][card_id]
         reps = int(flashcard.get("reps", 0))
         interval = int(flashcard.get("interval_days", 0))
+        ease = float(flashcard.get("ease_factor", 2.3))
         now = self._now_dt()
 
         if rating == "again":
             next_due = now + timedelta(minutes=10)
             interval = 0
+            ease = max(1.3, ease - 0.2)
         elif rating == "hard":
-            interval = 1 if reps == 0 else max(1, round(max(interval, 1) * 1.4))
+            ease = max(1.3, ease - 0.08)
+            interval = 1 if reps == 0 else max(1, round(max(interval, 1) * max(1.2, ease - 0.15)))
             next_due = now + timedelta(days=interval)
         elif rating == "good":
-            interval = 2 if reps == 0 else max(2, round(max(interval, 1) * 2.2))
+            interval = 2 if reps == 0 else max(2, round(max(interval, 1) * ease))
             next_due = now + timedelta(days=interval)
         else:
-            interval = 4 if reps == 0 else max(4, round(max(interval, 1) * 3.2))
+            ease = min(2.8, ease + 0.12)
+            interval = 4 if reps == 0 else max(4, round(max(interval, 1) * (ease + 0.35)))
             next_due = now + timedelta(days=interval)
 
         flashcard["reps"] = reps + 1
         flashcard["interval_days"] = interval
+        flashcard["ease_factor"] = round(ease, 2)
         flashcard["last_reviewed_at"] = now.isoformat()
         flashcard["due_at"] = next_due.isoformat()
+
+    def _classify_mistake_taxonomy(self, question: dict[str, Any], feedback_item: dict[str, Any]) -> str:
+        selected = str(feedback_item.get("selected_option", "")).strip().upper()
+        correct = str(feedback_item.get("correct_option", "")).strip().upper()
+        selected_text = self._option_text(question, selected).lower()
+        correct_text = self._option_text(question, correct).lower()
+        prompt_text = str(question.get("prompt", "")).lower()
+        if any(word in prompt_text for word in ("calculate", "compute", "amount", "basis", "rate", "deduction", "credit")):
+            return "calculation_error"
+        if any(word in selected_text for word in ("always", "never", "all", "none")):
+            return "overgeneralization"
+        if selected and correct and selected_text and correct_text and selected_text[:18] == correct_text[:18]:
+            return "reading_precision"
+        if "except" in prompt_text or "not" in prompt_text:
+            return "question_misread"
+        return "concept_confusion"
+
+    def _build_teach_back_card(self, state: dict[str, Any], response_text: str) -> dict[str, Any]:
+        lesson = self._require_current_lesson(state)
+        chunks = self.search_chunks(
+            lesson.retrieval_query,
+            chapter_numbers={lesson.chapter_number},
+            top_k=4,
+        )
+        expected_terms = self._keyword_tokens(" ".join(chunk["text"][:400] for chunk in chunks))
+        expected_core = list(dict.fromkeys(expected_terms))[:30]
+        response_tokens = set(self._keyword_tokens(response_text))
+        overlap = [token for token in expected_core if token in response_tokens]
+        ratio = (len(overlap) / max(1, len(expected_core))) * 100
+
+        if ratio >= 45:
+            verdict = "Strong"
+            next_step = "Great teach-back. Move to a mixed review or continue to the next lesson."
+        elif ratio >= 25:
+            verdict = "Developing"
+            next_step = "Good start. Tighten your explanation by naming rule triggers and one numeric-style example."
+        else:
+            verdict = "Needs Focus"
+            next_step = "Re-read the lesson and restate the rule in three sentences: trigger, calculation, and outcome."
+
+        missing = [token for token in expected_core if token not in response_tokens][:8]
+        teach_card = {
+            "card_type": "teach_back",
+            "title": f"Teach-Back Feedback: {lesson.title}",
+            "subtitle": f"Chapter {lesson.chapter_number}: {lesson.chapter_title}",
+            "intro": f"Teach-back rating: {verdict} ({round(ratio)}% concept coverage).",
+            "scope_note": "This feedback scores your own explanation against expected lesson concepts.",
+            "teaching_points": [
+                f"Concept tokens matched: {', '.join(overlap[:8]) or 'none yet'}",
+                f"Missing high-signal terms: {', '.join(missing) or 'none'}",
+                "A strong teach-back names the rule trigger, the tax effect, and one concrete example.",
+                "Avoid vague wording; use direct tax terms from the lesson.",
+                "State one common mistake and why it is wrong.",
+            ],
+            "worked_example": [
+                "Sentence 1: Define the rule in plain language.",
+                "Sentence 2: State when the rule applies (trigger).",
+                "Sentence 3: Show the tax effect with a tiny numeric example.",
+                "Sentence 4: Note one trap and the correction.",
+            ],
+            "flashcards": [
+                {"front": "What trigger makes this lesson's rule apply?", "back": "State the condition that activates the rule."},
+                {"front": "What is the core tax effect?", "back": "State what changes: taxable amount, timing, basis, or rate."},
+                {"front": "What is one common trap?", "back": "Name one wrong assumption and how to correct it."},
+            ],
+            "quiz_questions": [
+                {
+                    "prompt": "Which teach-back sentence quality is strongest?",
+                    "hint": "Pick the sentence that includes trigger and tax effect.",
+                    "options": [
+                        {"label": "A", "text": "The rule exists and taxes are important.", "why": "Too vague; no trigger or effect."},
+                        {"label": "B", "text": "When condition X occurs, amount Y is included/excluded because of rule Z.", "why": "Best: trigger, effect, and rule link."},
+                        {"label": "C", "text": "I think it depends on everything.", "why": "Too uncertain and non-specific."},
+                        {"label": "D", "text": "This chapter has many terms.", "why": "Descriptive but not explanatory."},
+                        {"label": "E", "text": "The answer is usually the longest option.", "why": "Test strategy, not concept mastery."},
+                    ],
+                    "correct_option": "B",
+                    "study_answer": "Use trigger + tax effect + rule connection.",
+                },
+                {
+                    "prompt": "What should come after your rule statement?",
+                    "hint": "Think applied example.",
+                    "options": [
+                        {"label": "A", "text": "A concrete example with numbers or facts.", "why": "Correct: demonstrates application."},
+                        {"label": "B", "text": "A quote from memory only.", "why": "Memorization without application is weak."},
+                        {"label": "C", "text": "An unrelated chapter summary.", "why": "Off-topic."},
+                        {"label": "D", "text": "No example is needed.", "why": "Examples are essential for mastery."},
+                        {"label": "E", "text": "Only a definition list.", "why": "Definitions alone are not enough."},
+                    ],
+                    "correct_option": "A",
+                    "study_answer": "Follow the rule with a concrete applied example.",
+                },
+                {
+                    "prompt": "How do you make a teach-back exam-ready?",
+                    "hint": "Focus on precision and traps.",
+                    "options": [
+                        {"label": "A", "text": "Keep it broad so it fits everything.", "why": "Broad phrasing misses test precision."},
+                        {"label": "B", "text": "Include one common trap and the correction.", "why": "Correct: improves precision under pressure."},
+                        {"label": "C", "text": "Avoid naming the rule to save time.", "why": "Naming the rule is core to accuracy."},
+                        {"label": "D", "text": "Use only memory tricks.", "why": "Memory tricks help but do not replace logic."},
+                        {"label": "E", "text": "Skip cause-and-effect wording.", "why": "Cause/effect wording is important for tax reasoning."},
+                    ],
+                    "correct_option": "B",
+                    "study_answer": "Name a common trap and the correction for exam precision.",
+                },
+            ],
+            "memory_trick": "Teach-back formula: Trigger -> Tax Effect -> Example -> Trap.",
+            "next_step": next_step,
+            "citations": [
+                {
+                    "chunk_id": chunk["chunk_id"],
+                    "why_this_chunk": "Source used to score your teach-back concept coverage.",
+                }
+                for chunk in chunks[:2]
+            ],
+        }
+        finalized = self._finalize_card(teach_card, lesson, chunks)
+        finalized["teach_back_feedback"] = {
+            "verdict": verdict,
+            "coverage_percent": round(ratio),
+            "matched_terms": overlap[:12],
+            "missing_terms": missing,
+        }
+        return finalized
 
     def _pages_label(self, start_page: int | None, end_page: int | None) -> str:
         if start_page and end_page and start_page != end_page:

@@ -102,6 +102,55 @@ class EngineAndApiTests(unittest.TestCase):
             server.shutdown()
             server.server_close()
 
+    def test_exam_center_includes_new_modes(self) -> None:
+        state = self.engine._default_state()  # pylint: disable=protected-access
+        center = self.engine._build_exam_center(state, self.engine.lessons[0])  # pylint: disable=protected-access
+        mode_names = {mode["exam_mode"] for mode in center["modes"]}
+        self.assertIn("diagnostic_pretest", mode_names)
+        self.assertIn("workpaper_drill", mode_names)
+        self.assertIn("cumulative_timed", mode_names)
+
+    def test_mistake_notebook_includes_taxonomy_counts(self) -> None:
+        lesson = self.engine.lessons[0]
+        state = self.engine._default_state()  # pylint: disable=protected-access
+        state["mistake_notebook"] = [
+            {
+                "entry_id": "m1",
+                "lesson_id": lesson.lesson_id,
+                "reopen_lesson_id": lesson.lesson_id,
+                "lesson_title": lesson.title,
+                "chapter_number": lesson.chapter_number,
+                "prompt": "Sample prompt 1",
+                "selected_option": "A",
+                "correct_option": "B",
+                "why_selected_wrong": "Reason 1",
+                "why_correct_right": "Reason 2",
+                "taxonomy": "concept_confusion",
+                "resolved": False,
+                "created_at": "2026-01-01T00:00:00+00:00",
+            },
+            {
+                "entry_id": "m2",
+                "lesson_id": lesson.lesson_id,
+                "reopen_lesson_id": lesson.lesson_id,
+                "lesson_title": lesson.title,
+                "chapter_number": lesson.chapter_number,
+                "prompt": "Sample prompt 2",
+                "selected_option": "C",
+                "correct_option": "D",
+                "why_selected_wrong": "Reason 3",
+                "why_correct_right": "Reason 4",
+                "taxonomy": "calculation_error",
+                "resolved": False,
+                "created_at": "2026-01-02T00:00:00+00:00",
+            },
+        ]
+        notebook = self.engine._build_mistake_notebook(state)  # pylint: disable=protected-access
+        self.assertEqual(notebook["unresolved_count"], 2)
+        self.assertEqual(notebook["taxonomy_counts"].get("concept_confusion"), 1)
+        self.assertEqual(notebook["taxonomy_counts"].get("calculation_error"), 1)
+        self.assertTrue(all("taxonomy" in item for item in notebook["items"]))
+
 
 if __name__ == "__main__":
     unittest.main()
