@@ -182,6 +182,23 @@ class EngineAndApiTests(unittest.TestCase):
         self.assertGreaterEqual(completed, 1)
         self.assertIn(lesson.lesson_id, self.engine._load_state()["completed_lessons"])  # pylint: disable=protected-access
 
+    def test_hydrate_state_restores_completion(self) -> None:
+        lesson = self.engine.lessons[0]
+        payload = {
+            "current_lesson_id": lesson.lesson_id,
+            "completed_lessons": [lesson.lesson_id],
+            "last_card": None,
+            "flashcards": {},
+            "lesson_performance": {},
+            "mistake_notebook": [],
+            "weekly_goal_lessons": 2,
+            "midterm_mode": {"enabled": False, "start_chapter": 1, "end_chapter": 25},
+            "updated_at": "2026-05-16T20:00:00+00:00",
+        }
+        result = self.engine.handle_action("hydrate_state", {"state": payload})
+        self.assertGreaterEqual(result["state"]["completed_lesson_count"], 1)
+        self.assertIn(lesson.lesson_id, self.engine._load_state()["completed_lessons"])  # pylint: disable=protected-access
+
 
 if __name__ == "__main__":
     unittest.main()

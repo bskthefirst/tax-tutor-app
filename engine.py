@@ -654,6 +654,11 @@ class TaxTutorEngine:
                 state["weekly_goal_lessons"] = max(1, min(5, weekly_goal))
             elif action == "start_over":
                 state = self._default_state()
+            elif action == "hydrate_state":
+                incoming = payload.get("state")
+                if not isinstance(incoming, dict):
+                    raise ValueError("Hydration requires a valid state object.")
+                state = self._normalize_state(incoming)
             else:
                 raise ValueError(f"Unsupported action: {action}")
 

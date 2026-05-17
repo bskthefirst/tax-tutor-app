@@ -57,6 +57,64 @@ const weeklyGoalInput = document.getElementById("weeklyGoalInput");
 const dashboardViewTabs = Array.from(document.querySelectorAll("[data-dashboard-view]"));
 const actionButtons = Array.from(document.querySelectorAll("[data-action]"));
 const actionButtonMap = new Map(actionButtons.map((button) => [button.dataset.action, button]));
+const LOCAL_STATE_KEY = "tax_tutor_local_state_v1";
+
+function loadLocalStateSnapshot() {
+  try {
+    const raw = window.localStorage.getItem(LOCAL_STATE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object" || !parsed.updated_at) return null;
+    return parsed;
+  } catch (error) {
+    return null;
+  }
+}
+
+function saveLocalStateSnapshot(appState) {
+  if (!appState || typeof appState !== "object") return;
+  try {
+    const snapshot = {
+      current_lesson_id: appState.current_lesson?.lesson_id || null,
+      completed_lessons: (appState.chapters || [])
+        .flatMap((chapter) => chapter.lessons || [])
+        .filter((lesson) => lesson.completed)
+        .map((lesson) => lesson.lesson_id),
+      last_card: appState.last_card || null,
+      flashcards: appState.flashcards || {},
+      lesson_performance: appState.lesson_performance || {},
+      mistake_notebook: appState.mistake_notebook?.items || [],
+      weekly_goal_lessons: appState.weekly_goal_lessons || 2,
+      midterm_mode: appState.midterm_mode || { enabled: false, start_chapter: 1, end_chapter: 25 },
+      updated_at: appState.updated_at || new Date().toISOString(),
+    };
+    window.localStorage.setItem(LOCAL_STATE_KEY, JSON.stringify(snapshot));
+  } catch (error) {
+    // Ignore storage write failures so learning flow never blocks.
+  }
+}
+
+async function hydrateStateFromLocal(bootstrapState) {
+  const localState = loadLocalStateSnapshot();
+  if (!localState) return bootstrapState;
+  const localTs = Date.parse(localState.updated_at || "");
+  const serverTs = Date.parse(bootstrapState?.updated_at || "");
+  if (Number.isFinite(serverTs) && Number.isFinite(localTs) && localTs <= serverTs) {
+    return bootstrapState;
+  }
+  try {
+    const response = await fetch("/api/action", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "hydrate_state", state: localState }),
+    });
+    const data = await response.json();
+    if (!response.ok || !data?.state) return bootstrapState;
+    return data.state;
+  } catch (error) {
+    return bootstrapState;
+  }
+}
 
 function setPageMode(mode) {
   state.pageMode = mode;
@@ -2200,6 +2258,7 @@ function renderCard(card) {
 
 function render(appState) {
   state.data = appState;
+  saveLocalStateSnapshot(appState);
   renderLayoutMode(appState);
   renderTopProgress(appState);
   renderResumeCard(appState);
@@ -2222,7 +2281,8 @@ function render(appState) {
 
 async function fetchBootstrap() {
   const response = await fetch("/api/bootstrap");
-  const data = await response.json();
+  const bootstrapState = await response.json();
+  const data = await hydrateStateFromLocal(bootstrapState);
   state.courseLoaded = false;
   state.planLoaded = false;
   state.showFullPlan = false;
