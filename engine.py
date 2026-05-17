@@ -625,6 +625,10 @@ class TaxTutorEngine:
                 lesson = self._require_current_lesson(state)
                 answers = payload.get("answers") or []
                 card = self._grade_quiz_for_current_card(state, lesson, answers)
+                # Auto-save milestone: grading a quiz marks the current lesson complete.
+                if lesson.lesson_id not in state["completed_lessons"]:
+                    state["completed_lessons"].append(lesson.lesson_id)
+                self._mark_lesson_completed(state, lesson.lesson_id)
             elif action == "ask_question":
                 question = str(payload.get("question", "")).strip()
                 if not question:

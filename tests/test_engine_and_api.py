@@ -151,6 +151,37 @@ class EngineAndApiTests(unittest.TestCase):
         self.assertEqual(notebook["taxonomy_counts"].get("calculation_error"), 1)
         self.assertTrue(all("taxonomy" in item for item in notebook["items"]))
 
+    def test_submit_quiz_auto_saves_lesson_completion(self) -> None:
+        lesson = self.engine.lessons[0]
+        state = self.engine._default_state()  # pylint: disable=protected-access
+        state["current_lesson_id"] = lesson.lesson_id
+        state["last_card"] = {
+            "lesson_id": lesson.lesson_id,
+            "coverage": {},
+            "flashcards": [],
+            "quiz_questions": [
+                {
+                    "question_id": "q1",
+                    "question_number": 1,
+                    "prompt": "Q1",
+                    "correct_option": "A",
+                    "study_answer": "Rule summary.",
+                    "options": [
+                        {"label": "A", "text": "Right", "why": "Matches the rule."},
+                        {"label": "B", "text": "Wrong", "why": "Does not match."},
+                        {"label": "C", "text": "Wrong", "why": "Does not match."},
+                        {"label": "D", "text": "Wrong", "why": "Does not match."},
+                        {"label": "E", "text": "Wrong", "why": "Does not match."},
+                    ],
+                }
+            ],
+        }
+        self.engine._save_state(state)  # pylint: disable=protected-access
+        result = self.engine.handle_action("submit_quiz", {"answers": ["A"]})
+        completed = result["state"]["completed_lesson_count"]
+        self.assertGreaterEqual(completed, 1)
+        self.assertIn(lesson.lesson_id, self.engine._load_state()["completed_lessons"])  # pylint: disable=protected-access
+
 
 if __name__ == "__main__":
     unittest.main()
