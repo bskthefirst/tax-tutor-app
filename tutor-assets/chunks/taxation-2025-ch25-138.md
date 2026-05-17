@@ -1,0 +1,24 @@
+---
+source_markdown: "/Users/suhyun/Documents/Auditing Poly/textlayer-work/full-book/Taxation of Individuals and Business Entities 2025 -- Brian C_ Spilker, Benjamin C_ Ayers, Troy K_ Lewis, Connie -- 2025, 2025 -- McGraw Hill -- 9781265471422 -- b3af8ff1e7fee57c6b7f0efbab05bcb7 -- Anna’s Archive.md"
+chunk_id: "taxation-2025-ch25-138"
+chapter_number: 25
+chapter_title: "Transfer Taxes and Wealth Planning"
+chunk_index: 138
+start_pdf_page: 2314
+end_pdf_page: 2315
+pdf_pages:
+  - 2314
+  - 2315
+headings:
+  - "ADDITIONAL STUDENT RESOURCES"
+  - "Return to Exhibit 24-1(a)"
+word_count: 704
+---
+
+substantiate other deductions, the court may estimate the deductible amount under the Cohan rule [George Cohan v. Comm’r, 39 F.2d 540 (2d Cir. 1930)]. 26 Adjusted taxable income of the taxpayer cannot be less than zero. Under §163(j), the interest expense disallowance is determined at the filer level, but special rules apply to pass-through entities. For years before 2022, adjusted taxable income was computed without deducting depreciation, amortization, and depletion. 26 Adjusted taxable income of the taxpayer cannot be less than zero. Under §163(j), the interest expense disallowance is determined at the filer level, but special rules apply to pass-through entities. 27 Casualties are unexpected events driven by forces outside the control of the taxpayer that damage or destroy a taxpayer’s property. §165 lists “fire, storm, and shipwreck” as examples of casualties. 28 §443. Discussion of tax consequences associated with these short years is beyond the scope of this text. 29 Businesses with inventories, such as retailers, can benefit from 52/53-week year-ends. These year-ends can facilitate inventory counts (e.g., the store is closed, such as over a weekend) and financial reporting. 30 Virtually all individual taxpayers use a calendar-year tax year. 31 See §706 for the specific restrictions on year-ends for partnerships and §1378 for restrictions on S corporations. If they can show a business purpose (a difficult task), both partnerships and S corporations can adopt year-ends other than those used by their owners. 32 Accounting methods determine when income or a deduction is recognized but do not determine whether an item of income is taxable or an expense is deductible. 33 §446(a). Businesses that use different accounting methods for book and tax income must typically file a Schedule M-1 or Schedule M-3 that reconciles the results from the two accounting methods. 34 §446(b). 35 Businesses that are defined as tax shelters cannot qualify for the cash method under §448(a). A business using the cash method that fails the gross receipts test must change to the accrual method of accounting. However, if the same business qualifies under the gross receipts test in a subsequent year, the business may elect to use the cash method again. 36 §263(a). 37 Reg §1.263(a)-4(f). This 12-month rule applies to both cash-method and accrual-method taxpayers. However, for accrual-method taxpayers to deduct prepaid expenses, they must meet both the 12-month rule requirements and the economic performance requirements discussed in the Accrual Deductions section. 38 Reg. §1.451-1(a).
+
+---
+
+39 §451(b). Applicable financial statements are described in §451(b)(3). 40 Unlike advance payments, businesses are not required to recognize security deposits as income because there is an obligation to return the deposit [Comm’r v. Indianapolis Power & Light Co., 493 U.S. 203 (1990)]. 41 §451(c). 43 Inventory valuation allowances are generally not allowed, but taxpayers can adopt the lower of cost or market method of inventory valuation. In addition, under certain conditions specific goods not salable at normal prices can be valued at bona fide selling prices less direct cost of disposition. 45 §263A(i). 46 Reg. §1.263A–1(e)(3)(iii). 47 §472(c). 48 §461(h). 49 §461. 50 Reg. §1.461-4(d)(6). 51 While taxes are generally not deducted until they are paid, §461(c) allows businesses to elect to accrue the deduction for real property taxes ratably over the tax period instead of deducting them when paid. 52 §461(h)(3). 53 Reg. §1.461-5(b)(5)(ii). 54 §166(a). 55 §267(a). 56 Certain constructive (indirect) ownership rules apply in determining ownership percentages for this purpose. See §267(c). 57 See §267(b) for related-person definitions. 58 Recall businesses are able to adopt the cash method when they qualify as a small business under the gross receipts test. 59 §§448(d)(7), 471(c)(4), 263A(i)(3), respectively. These changes in accounting method are treated as initiated by the taxpayer and no longer need the consent of the Secretary. 60 Rev. Proc. 2015-13. There are multiple exceptions to the general rule. For example, taxpayers with positive §481 adjustments less than $25,000 can elect to recognize the entire amount in the year of
+
+---

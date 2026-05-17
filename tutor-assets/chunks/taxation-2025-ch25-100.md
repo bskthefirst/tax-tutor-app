@@ -1,0 +1,39 @@
+---
+source_markdown: "/Users/suhyun/Documents/Auditing Poly/textlayer-work/full-book/Taxation of Individuals and Business Entities 2025 -- Brian C_ Spilker, Benjamin C_ Ayers, Troy K_ Lewis, Connie -- 2025, 2025 -- McGraw Hill -- 9781265471422 -- b3af8ff1e7fee57c6b7f0efbab05bcb7 -- Anna’s Archive.md"
+chunk_id: "taxation-2025-ch25-100"
+chapter_number: 25
+chapter_title: "Transfer Taxes and Wealth Planning"
+chunk_index: 100
+start_pdf_page: 2228
+end_pdf_page: 2232
+pdf_pages:
+  - 2228
+  - 2229
+  - 2230
+  - 2231
+  - 2232
+headings:
+  - "ADDITIONAL STUDENT RESOURCES"
+  - "Return to Exhibit 24-1(a)"
+word_count: 1090
+---
+
+Guide 1. Sharpen 2. Meet Sharpen 3. Table of Contents and Preface 4. Cover Page 5. Title Page 6. Copyright Page 7. Dedications 8. About the Authors 9. In Memoriam 10. Teaching the Code in Context 11. A Modern Approach for Today’s Student 12. A Storyline Approach that Resonates with Students 13. The Pedagogy Your Students Need to Put the Code in Context 14. Practice Makes Perfect with a Wide Variety of Assignment Material 15. Connect
+
+---
+
+16. Digital Learning Assets to Improve Student Outcomes 17. Supplements for Instructors 18. Four Volumes to Fit Four Course Approaches 19. Acknowledgments 20. Changes in Taxation of Individuals and Business Entities, 2025 21. As We Go to Press 22. Table of Contents 23. Chapter 1: An Introduction to Tax 24. Chapter 1: Introduction 25. Who Cares about Taxes and Why? 26. What Qualifies as a Tax? 27. How to Calculate a Tax 28. Different Ways to Measure Tax Rates 29. Tax Rate Structures 30. Proportional Tax Rate Structure 31. Progressive Tax Rate Structure 32. Regressive Tax Rate Structure 33. Types of Taxes 34. Federal Taxes 35. State and Local Taxes 36. Implicit Taxes 37. Evaluating Alternative Tax Systems 38. Sufficiency 39. Equity 40. Certainty 41. Convenience 42. Economy 43. Evaluating Tax Systems—the Trade-Offs 44. Conclusion 45. Chapter 1: Summary 46. Chapter 1: Key Terms 47. Chapter 1: Discussion Questions 48. Chapter 1: Problems 49. Chapter 1: AI/Critical Thinking Questions 50. Chapter 2: Tax Compliance, the IRS, and Tax Authorities 51. Chapter 2: Introduction 52. Taxpayer Filing Requirements 53. Tax Return Due Date and Extensions 54. Statute of Limitations 55. IRS Audit Selection 56. Types of Audits 57. Tax Law Sources 58. Legislative Sources: Congress and the Constitution 59. Judicial Sources: The Courts 60. Administrative Sources: The U.S. Treasury 61. Tax Research 62. Step 1: Understand Facts 63. Step 2: Identify Issues 64. Step 3: Locate Relevant Authorities 65. Step 4: Analyze Tax Authorities
+
+---
+
+66. Step 5: Document and Communicate the Results 67. Tax Professional Responsibilities 68. Taxpayer and Tax Return Preparer Penalties 69. Conclusion 70. Chapter 2: Summary 71. Chapter 2: Key Terms 72. Chapter 2: Discussion Questions 73. Chapter 2: Problems 74. Chapter 2: AI/Critical Thinking Questions 75. Chapter 3: Tax Planning Strategies and Related Limitations 76. Chapter 3: Introduction 77. Basic Tax Planning Overview 78. Timing Strategies 79. Present Value of Money 80. The Timing Strategy When Tax Rates Are Constant 81. The Timing Strategy When Tax Rates Change 82. Income-Shifting Strategies 83. Transactions between Family Members and Limitations 84. Transactions between Owners and Their Businesses and Limitations 85. Income Shifting across Jurisdictions and Limitations 86. Conversion Strategies 87. Limitations of Conversion Strategies 88. Additional Limitations to Tax Planning Strategies: Judicially Based Doctrines 89. Tax Avoidance versus Tax Evasion 90. Conclusion 91. Chapter 3: Summary 92. Chapter 3: Key Terms 93. Chapter 3: Discussion Questions 94. Chapter 3: Problems 95. Chapter 3: AI/Critical Thinking Questions 96. Chapter 4: Individual Income Tax Overview, Dependents, and Filing Status 97. Chapter 4: Introduction 98. The Individual Income Tax Formula 99. Gross Income 100. Character of Income 101. Deductions 102. Income Tax Calculation 103. Other Taxes 104. Tax Credits 105. Tax Prepayments 106. Dependents of the Taxpayer 107. Dependency Requirements 108. Filing Status 109. Married Filing Jointly and Married Filing Separately 110. Qualifying Surviving Spouse 111. Single 112. Head of Household 113. Summary of Income Tax Formula 114. Conclusion 115. Appendix A: Dependency Exemption Flowchart (Part I)
+
+---
+
+116. Appendix B: Qualifying Person for Head of Household Filing Status Flowchart 117. Appendix C: Determination of Filing Status Flowchart 118. Chapter 4: Summary 119. Chapter 4: Key Terms 120. Chapter 4: Discussion Questions 121. Chapter 4: Problems 122. Chapter 4: Comprehensive Problems 123. Chapter 4: AI/Critical Thinking Questions 124. Chapter 5: Gross Income and Exclusions 125. Chapter 5: Introduction 126. Realization and Recognition of Income 127. What Is Included in Gross Income? 128. Other Income Concepts 129. When Do Taxpayers Recognize Income? 130. Who Recognizes the Income? 131. Types of Income 132. Income from Services 133. Income from Property 134. Other Sources of Gross Income 135. Exclusion Provisions 136. Common Exclusions 137. Education-Related Exclusions 138. Exclusions That Mitigate Double Taxation 139. Sickness and Injury-Related Exclusions 140. Deferral Provisions 141. Income Summary 142. Conclusion 143. Appendix A: 2023 Social Security Worksheet from Form 1040 Instructions 144. Chapter 5: Summary 145. Chapter 5: Key Terms 146. Chapter 5: Discussion Questions 147. Chapter 5: Problems 148. Chapter 5: Comprehensive Problems 149. Chapter 5: AI/Critical Thinking Questions 150. Chapter 6: Individual Deductions 151. Chapter 6: Introduction 152. Deductions for AGI 153. Deductions Directly Related to Business Activities 154. Deductions Indirectly Related to Business Activities 155. Deductions Subsidizing Specific Activities 156. Summary: Deductions for AGI 157. Deductions from AGI: Itemized Deductions 158. Medical Expenses 159. Taxes 160. Interest 161. Charitable Contributions 162. Casualty and Theft Losses on Personal-Use Assets 163. Other Itemized Deductions 164. Summary of Itemized Deductions 165. The Standard Deduction
+
+---
+
+166. Standard Deduction 167. Deduction for Qualified Business Income 168. Deduction for Qualified Business Income 169. Limitations 170. Taxable Income Summary 171. Conclusion 172. Chapter 6: Summary 173. Chapter 6: Key Terms 174. Chapter 6: Discussion Questions 175. Chapter 6: Problems 176. Chapter 6: Comprehensive Problems 177. Chapter 6: AI/Critical Thinking Questions 178. Chapter 7: Investments 179. Chapter 7: Introduction 180. Investments Overview 181. Portfolio Income: Interest and Dividends 182. Interest 183. Dividends 184. Portfolio Income: Capital Gains and Losses 185. Types of Capital Gains and Losses 186. Limits for Capital Loss Deductions 187. Balancing Tax Planning Strategies for Capital Assets with Other Goals 188. Portfolio Income Summary 189. Investment Interest Expense and Net Investment Income Tax 190. Net Investment Income Tax 191. Passive Activity Income and Losses 192. Passive Activity Definition 193. Income and Loss Categories 194. Rental Real Estate Exception to the Passive Activity Loss Rules 195. Net Investment Income Tax on Net Passive Income 196. Conclusion 197. Appendix A: Detailed Step-By-Step Guide to the Capital Gains Netting Process 198. Chapter 7: Summary 199. Chapter 7: Key Terms 200. Chapter 7: Discussion Questions 201. Chapter 7: Problems 202. Chapter 7: Comprehensive Problem 203. Chapter 7: AI/Critical Thinking Questions 204. Chapter 8: Individual Income Tax Computation and Tax Credits 205. Chapter 8: Introduction 206. Regular Federal Income Tax Computation 207. Tax Rate Schedules 208. Marriage Penalty or Benefit 209. Exceptions to the Basic Tax Computation 210. Alternative Minimum Tax 211. Alternative Minimum Tax Formula 212. Additional Taxes 213. Employment and Self-Employment Taxes 214. Tax Credits 215. Nonrefundable Personal Credits
+
+---

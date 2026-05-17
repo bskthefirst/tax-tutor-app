@@ -1,0 +1,29 @@
+---
+source_markdown: "/Users/suhyun/Documents/Auditing Poly/textlayer-work/full-book/Taxation of Individuals and Business Entities 2025 -- Brian C_ Spilker, Benjamin C_ Ayers, Troy K_ Lewis, Connie -- 2025, 2025 -- McGraw Hill -- 9781265471422 -- b3af8ff1e7fee57c6b7f0efbab05bcb7 -- Anna’s Archive.md"
+chunk_id: "taxation-2025-ch25-095"
+chapter_number: 25
+chapter_title: "Transfer Taxes and Wealth Planning"
+chunk_index: 95
+start_pdf_page: 2199
+end_pdf_page: 2201
+pdf_pages:
+  - 2199
+  - 2200
+  - 2201
+headings:
+  - "ADDITIONAL STUDENT RESOURCES"
+  - "Return to Exhibit 24-1(a)"
+word_count: 856
+---
+
+2. Income and Loss Allocations 3. Separately Stated Items 5. Shareholder’s Basis 1. Loss Limitations 2. Self-Employment Income 3. Net Investment Income Tax 4. Fringe Benefits 6. Distributions 1. Operating Distributions 2. Liquidating Distributions 7. S Corporation Taxes and Filing Requirements 1. Built-in Gains Tax 2. Excess Net Passive Income Tax 3. LIFO Recapture Tax 4. Estimated Taxes 5. Filing Requirements 8. Comparing C and S Corporations and Partnerships 9. Conclusion 10. Chapter 22: Summary 11. Chapter 22: Key Terms 12. Chapter 22: Discussion Questions 13. Chapter 22: Problems 14. Chapter 22: Comprehensive Problems 15. Chapter 22: AI/Critical Thinking Questions 25. Chapter 23: State and Local Taxes 1. Chapter 23: Introduction 2. State and Local Taxes 3. Sales and Use Taxes 1. Sales Tax Nexus 2. Sales Tax Liability 4. Income Taxes 1. Income Tax Nexus 2. Entities Included on Income Tax Return 3. State Taxable Income 4. Dividing State Tax Base among States 5. State Income Tax Liability 6. Nonincome-Based Taxes 5. Conclusion 6. Chapter 23: Summary 7. Chapter 23: Key Terms 8. Chapter 23: Discussion Questions 9. Chapter 23: Problems 10. Chapter 23: Comprehensive Problems 11. Chapter 23: AI/Critical Thinking Questions 26. Chapter 24: The U.S. Taxation of Multinational Transactions 1. Chapter 24: Introduction 2. The U.S. Framework for Taxing Multinational Transactions 1. U.S. Taxation of a Nonresident 2. Definition of a Resident for U.S. Tax Purposes 3. Overview of the U.S. Foreign Tax Credit System
+
+---
+
+3. U.S. Source Rules for Gross Income and Deductions 1. Source-of-Income Rules 2. Source-of-Deduction Rules 4. Operating Abroad through a Foreign Corporation 5. Treaties 6. Foreign Tax Credits 1. FTC Limitation Categories of Taxable Income 2. Creditable Foreign Taxes 7. Planning for International Operations 1. Check-the-Box Hybrid Entities 8. U.S. Anti-Deferral Rules 1. Definition of a Controlled Foreign Corporation 2. Definition of Subpart F Income 3. Planning to Avoid Subpart F Income 4. Global Intangible Low-Taxed Income 9. Base Erosion and Profit-Shifting Initiatives around the World 10. Conclusion 11. Chapter 24: Summary 12. Chapter 24: Key Terms 13. Chapter 24: Discussion Questions 14. Chapter 24: Problems 15. Chapter 24: Comprehensive Problems 16. Chapter 24: AI/Critical Thinking Questions 27. Chapter 25: Transfer Taxes and Wealth Planning 1. Chapter 25: Introduction 2. Introduction to Federal Transfer Taxes 1. Beginnings 2. Common Features of Integrated Transfer Taxes 3. The Federal Gift Tax 1. Transfers Subject to Gift Tax 2. Taxable Gifts 3. Computation of the Gift Tax 4. The Federal Estate Tax 1. The Gross Estate 2. The Taxable Estate 3. Computation of the Estate Tax 5. Wealth Planning Concepts 1. The Generation-Skipping Tax 2. Income Tax Considerations 3. Transfer Tax Planning Techniques 4. Integrated Wealth Plans 6. Conclusion 7. Chapter 25: Summary 8. Chapter 25: Key Terms 9. Chapter 25: Discussion Questions 10. Chapter 25: Problems 11. Chapter 25: Comprehensive Problems 12. Chapter 25: AI/Critical Thinking Questions 28. Appendix A: Tax Forms 1. Appendix A: Tax Forms
+
+---
+
+29. Appendix B: Tax Terms Glossary 1. Appendix B: Tax Terms Glossary 30. Appendix C: Tax Rates 1. Appendix C: Tax Rates 31. Code Index 1. Code Index 32. Subject Index 1. Subject Index 33. Additional Student Resources 1. Additional Student Resources 34. Accessibility Content: Text Alternatives for Images 1. Front Cover of McGraw Hill’s Text Alternative (FM) 2. A Partial Page Text Alternative (FM) 3. A Page with Four Sections Shows Text Alternative (FM) 4. A Page Shows the Text Text Alternative (FM) 5. Front Cover of McGraw Hill’s Text Alternative (FM) 6. Exhibit 1-1 Text Alternative (Chapter 1) 7. Exhibit 1-2 Text Alternative (Chapter 1) 8. Exhibit 1-3 Text Alternative (Chapter 1) 9. Exhibit 1-4 Text Alternative (Chapter 1) 10. Exhibit 1-5 Text Alternative (Chapter 1) 11. Exhibit 2-2 Text Alternative (Chapter 2) 12. Exhibit 2-3 Text Alternative (Chapter 2) 13. Exhibit 2-4 Text Alternative (Chapter 2) 14. Exhibit 2-7 Text Alternative (Chapter 2) 15. Exhibit 3-3 Text Alternative (Chapter 3) 16. Exhibit 4-2(a) Text Alternative (Chapter 4) 17. Exhibit 4-2(b) Text Alternative (Chapter 4) 18. Exhibit 4-2(c) Text Alternative (Chapter 4) 19. Exhibit 4-2(d) Text Alternative (Chapter 4) 20. Exhibit 4-11(a) Text Alternative (Chapter 4) 21. Exhibit 4-11(b) Text Alternative (Chapter 4) 22. Exhibit 4-11(c) Text Alternative (Chapter 4) 23. A Flowchart of Dependency Exemption Text Alternative (Chapter 4) 24. Part 2 of the Previous Flowchart of Dependency Text Alternative (Chapter 4) 25. Appendix B Text Alternative (Chapter 4) 26. Appendix C Text Alternative (Chapter 4) 27. Exhibit 5-5 Text Alternative (Chapter 5) 28. Exhibit 5-6 Text Alternative (Chapter 5) 29. A Form Shows Social Security Text Alternative (Chapter 5) 30. Exhibit 6-2 Text Alternative (Chapter 6) 31. Exhibit 6-3 Text Alternative (Chapter 6) 32. Exhibit 6-7 Text Alternative (Chapter 6) 33. Exhibit 6-8(a) Text Alternative (Chapter 6) 34. Exhibit 6-8(b) Text Alternative (Chapter 6) 35. Exhibit 6-10 Text Alternative (Chapter 6) 36. Exhibit 6-13 Text Alternative (Chapter 6) 37. A Table Shows Jeb’s Netting Text Alternative (Chapter 7) 38. Exhibit 7-6 Text Alternative (Chapter 7) 39. Exhibit 7-7 Text Alternative (Chapter 7)
+
+---
