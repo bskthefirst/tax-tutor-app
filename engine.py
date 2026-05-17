@@ -10,6 +10,7 @@ import subprocess
 import sys
 import tempfile
 import threading
+import ssl
 import urllib.error
 import urllib.request
 from collections import OrderedDict
@@ -19,6 +20,7 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
+import certifi
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import linear_kernel
 
@@ -1967,6 +1969,7 @@ class TaxTutorEngine:
         ]
 
         last_error = "unknown provider error"
+        ssl_context = ssl.create_default_context(cafile=certifi.where())
         for payload in requests:
             req = urllib.request.Request(
                 endpoint,
@@ -1978,7 +1981,7 @@ class TaxTutorEngine:
                 method="POST",
             )
             try:
-                with urllib.request.urlopen(req, timeout=120) as response:
+                with urllib.request.urlopen(req, timeout=120, context=ssl_context) as response:
                     raw = response.read().decode("utf-8")
                 data = json.loads(raw)
                 choices = data.get("choices") or []
