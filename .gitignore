@@ -6,3 +6,5 @@ __pycache__/
 data/cache/
 data/codex-empty-workdir/
 data/study_state.json
+.env
+.env.local
