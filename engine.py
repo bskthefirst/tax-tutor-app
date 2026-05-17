@@ -91,8 +91,11 @@ class Lesson:
 class TaxTutorEngine:
     def __init__(self, app_root: Path) -> None:
         self.app_root = app_root
-        self.assets_root = app_root.parent / "textlayer-work" / "tutor-assets"
-        self.data_root = app_root / "data"
+        default_assets_root = app_root.parent / "textlayer-work" / "tutor-assets"
+        assets_override = os.environ.get("TAX_TUTOR_ASSETS_ROOT", "").strip()
+        self.assets_root = Path(assets_override).expanduser() if assets_override else default_assets_root
+        data_override = os.environ.get("TAX_TUTOR_DATA_ROOT", "").strip()
+        self.data_root = Path(data_override).expanduser() if data_override else (app_root / "data")
         self.cache_root = self.data_root / "cache"
         self.model_workdir = self.data_root / "codex-empty-workdir"
         self.state_path = self.data_root / "study_state.json"
@@ -101,6 +104,7 @@ class TaxTutorEngine:
         self.prompt_path = self.assets_root / "prompt" / "tax-tutor-system-prompt.md"
         self.chapter_index_path = self.assets_root / "chapter_index.json"
         self.chunks_path = self.assets_root / "taxation-2025-chunks.jsonl"
+        self._validate_assets()
         self.data_root.mkdir(parents=True, exist_ok=True)
         self.cache_root.mkdir(parents=True, exist_ok=True)
         self.model_workdir.mkdir(parents=True, exist_ok=True)
@@ -132,6 +136,25 @@ class TaxTutorEngine:
         self.warm_worker_started = False
         self.initial_warm_started = False
         self._start_warm_worker()
+
+    def _validate_assets(self) -> None:
+        required_paths = [
+            self.assets_root,
+            self.prompt_path,
+            self.chapter_index_path,
+            self.chunks_path,
+            self.assets_root / "chapters",
+        ]
+        missing = [str(path) for path in required_paths if not path.exists()]
+        if missing:
+            message = [
+                "Tax Tutor assets were not found.",
+                f"Expected assets root: {self.assets_root}",
+                "Set TAX_TUTOR_ASSETS_ROOT to your tutor-assets directory.",
+                "Missing paths:",
+                *[f"- {item}" for item in missing],
+            ]
+            raise RuntimeError("\n".join(message))
 
     def _load_chunks(self) -> list[dict[str, Any]]:
         chunks: list[dict[str, Any]] = []
@@ -207,14 +230,10 @@ class TaxTutorEngine:
 
                 if heading_upper == f"CHAPTER {chapter_number}: {chapter_title}".upper():
                     continue
-                if heading_upper in SKIP_HEADINGS:
-                    continue
                 if heading_upper.startswith("LO "):
                     active_objective = heading.replace("LO ", "", 1).strip()
                     continue
-                if heading_upper in SKIP_SUBHEADINGS:
-                    continue
-                if heading_upper.startswith("EXHIBIT "):
+                if self._should_skip_heading(heading, level, chapter_number):
                     continue
 
                 lesson_kind = self._classify_heading(level, heading_upper)
@@ -277,15 +296,34 @@ class TaxTutorEngine:
             parsed = self._parse_heading(first_line)
             if not parsed:
                 continue
-            _level, raw = parsed
+            level, raw = parsed
             heading = self._normalize_heading(raw)
-            upper = heading.upper()
-            if upper in SKIP_HEADINGS or upper.startswith("LO ") or upper.startswith("EXHIBIT ") or upper in SKIP_SUBHEADINGS:
+            if self._should_skip_heading(heading, level, chapter_number=0):
                 continue
             if heading not in seen:
                 headings.append(heading)
                 seen.add(heading)
         return headings
+
+    def _should_skip_heading(self, heading: str, level: int, chapter_number: int) -> bool:
+        upper = heading.upper().strip()
+        if upper in SKIP_HEADINGS or upper in SKIP_SUBHEADINGS:
+            return True
+        if upper.startswith("LO ") or upper.startswith("EXHIBIT "):
+            return True
+        if len(heading) == 1 and heading.isalpha():
+            return True
+        if upper.startswith("RETURN TO "):
+            return True
+        if upper.startswith("CODE INDEX"):
+            return True
+        if upper.startswith("SUBJECT INDEX"):
+            return True
+        if "ADDITIONAL STUDENT RESOURCES" in upper:
+            return True
+        if chapter_number and level <= 2 and upper == f"CHAPTER {chapter_number}":
+            return True
+        return False
 
     def _strip_front_matter(self, text: str) -> str:
         return FRONT_MATTER_RE.sub("", text, count=1)
@@ -481,9 +519,47 @@ class TaxTutorEngine:
     def bootstrap(self) -> dict[str, Any]:
         with self.lock:
             state = self._load_state()
-            payload = self._compose_state(state)
+            payload = self._compose_state(
+                state,
+                include_course=False,
+                include_plan=False,
+                include_last_card=False,
+            )
         self._start_initial_warm(state)
         return payload
+
+    def course_payload(self) -> dict[str, Any]:
+        with self.lock:
+            state = self._load_state()
+            payload = self._compose_state(
+                state,
+                include_course=True,
+                include_plan=False,
+                include_last_card=False,
+            )
+        return {
+            "chapters": payload["chapters"],
+            "chapter_count": payload["chapter_count"],
+            "lesson_count": payload["lesson_count"],
+            "updated_at": payload["updated_at"],
+        }
+
+    def plan_payload(self) -> dict[str, Any]:
+        with self.lock:
+            state = self._load_state()
+            active_lessons = self._active_lessons(state)
+            weekly_plan = self._build_weekly_plan(state, active_lessons)
+            current_index = self._current_week_index(weekly_plan)
+            preview = self._weekly_plan_preview(weekly_plan, window=12)
+        return {
+            "weekly_goal_lessons": state["weekly_goal_lessons"],
+            "midterm_mode": state["midterm_mode"],
+            "weekly_plan": weekly_plan,
+            "weekly_plan_preview": preview,
+            "weekly_plan_current_index": current_index,
+            "weekly_plan_total_count": len(weekly_plan),
+            "updated_at": state.get("updated_at"),
+        }
 
     def handle_action(self, action: str, payload: dict[str, Any] | None = None) -> dict[str, Any]:
         payload = payload or {}
@@ -731,12 +807,21 @@ class TaxTutorEngine:
         state["current_lesson_id"] = lesson.lesson_id
         return lesson
 
-    def _compose_state(self, state: dict[str, Any]) -> dict[str, Any]:
+    def _compose_state(
+        self,
+        state: dict[str, Any],
+        *,
+        include_course: bool = True,
+        include_plan: bool = True,
+        include_last_card: bool = True,
+    ) -> dict[str, Any]:
         completed = set(state["completed_lessons"])
         current_id = state.get("current_lesson_id")
         active_lessons = self._active_lessons(state)
         active_lesson_ids = {lesson.lesson_id for lesson in active_lessons}
         weekly_plan = self._build_weekly_plan(state, active_lessons)
+        current_week_index = self._current_week_index(weekly_plan)
+        weekly_plan_preview = self._weekly_plan_preview(weekly_plan, window=12)
         next_flashcard = self._next_due_flashcard(state)
         current_lesson = self.lesson_lookup.get(current_id) if current_id else None
 
@@ -750,21 +835,22 @@ class TaxTutorEngine:
                 is_completed = lesson.lesson_id in completed
                 if is_completed and lesson.lesson_id in active_lesson_ids:
                     completed_count += 1
-                position, total = self.lesson_positions[lesson.lesson_id]
-                lessons_payload.append(
-                    {
-                        "lesson_id": lesson.lesson_id,
-                        "title": lesson.title,
-                        "lesson_kind": lesson.lesson_kind,
-                        "objective_code": lesson.objective_code,
-                        "learning_goal": lesson.learning_goal,
-                        "completed": is_completed,
-                        "current": lesson.lesson_id == current_id,
-                        "in_scope": lesson.lesson_id in active_lesson_ids,
-                        "position_in_chapter": position,
-                        "chapter_lesson_total": total,
-                    }
-                )
+                if include_course:
+                    position, total = self.lesson_positions[lesson.lesson_id]
+                    lessons_payload.append(
+                        {
+                            "lesson_id": lesson.lesson_id,
+                            "title": lesson.title,
+                            "lesson_kind": lesson.lesson_kind,
+                            "objective_code": lesson.objective_code,
+                            "learning_goal": lesson.learning_goal,
+                            "completed": is_completed,
+                            "current": lesson.lesson_id == current_id,
+                            "in_scope": lesson.lesson_id in active_lesson_ids,
+                            "position_in_chapter": position,
+                            "chapter_lesson_total": total,
+                        }
+                    )
             chapters.append(
                 {
                     "chapter_number": chapter["chapter_number"],
@@ -786,6 +872,7 @@ class TaxTutorEngine:
         upcoming_lessons = self._build_up_next(state, limit=5)
         today_assignment = self._build_today_assignment(state, current_lesson, upcoming_lessons)
         chapter_mastery = self._build_chapter_mastery(state, current_lesson)
+        learning_objective_mastery = self._build_learning_objective_mastery(state)
         exam_center = self._build_exam_center(state, current_lesson)
         mistake_notebook = self._build_mistake_notebook(state)
 
@@ -795,14 +882,19 @@ class TaxTutorEngine:
             "lesson_count": len(active_lessons),
             "completed_lesson_count": len([lesson_id for lesson_id in completed if lesson_id in active_lesson_ids]),
             "current_lesson": current_payload,
-            "last_card": state.get("last_card"),
+            "has_saved_card": bool(state.get("last_card")),
+            "last_card": state.get("last_card") if include_last_card else None,
             "updated_at": state.get("updated_at"),
             "chapters": chapters,
             "weekly_goal_lessons": state["weekly_goal_lessons"],
-            "weekly_plan": weekly_plan,
+            "weekly_plan": weekly_plan if include_plan else weekly_plan_preview,
+            "weekly_plan_is_preview": not include_plan,
+            "weekly_plan_total_count": len(weekly_plan),
+            "weekly_plan_current_index": current_week_index,
             "up_next": upcoming_lessons,
             "today_assignment": today_assignment,
             "chapter_mastery": chapter_mastery,
+            "learning_objective_mastery": learning_objective_mastery,
             "exam_center": exam_center,
             "mistake_notebook": mistake_notebook,
             "midterm_mode": state["midterm_mode"],
@@ -810,6 +902,77 @@ class TaxTutorEngine:
             "flashcards_due_count": len(self._due_flashcards(state)),
             "next_due_flashcard": next_flashcard,
         }
+
+    def _build_learning_objective_mastery(self, state: dict[str, Any]) -> list[dict[str, Any]]:
+        objective_map: dict[str, dict[str, Any]] = {}
+        unresolved_mistakes = self._unresolved_mistakes(state)
+        unresolved_by_lesson: dict[str, int] = {}
+        for entry in unresolved_mistakes:
+            lesson_id = entry.get("reopen_lesson_id") or entry.get("lesson_id")
+            if lesson_id:
+                unresolved_by_lesson[lesson_id] = unresolved_by_lesson.get(lesson_id, 0) + 1
+
+        for lesson in self._active_lessons(state):
+            objective_code = (lesson.objective_code or "").strip()
+            if not objective_code:
+                continue
+            bucket = objective_map.setdefault(
+                objective_code,
+                {
+                    "objective_code": objective_code,
+                    "lesson_count": 0,
+                    "completed_count": 0,
+                    "attempts": 0,
+                    "best_correct_points": 0,
+                    "possible_correct_points": 0,
+                    "unresolved_mistakes": 0,
+                },
+            )
+            bucket["lesson_count"] += 1
+            if lesson.lesson_id in state["completed_lessons"]:
+                bucket["completed_count"] += 1
+
+            perf = state["lesson_performance"].get(lesson.lesson_id, {})
+            attempts = int(perf.get("attempts", 0) or 0)
+            best_correct = int(perf.get("best_correct_count", 0) or 0)
+            bucket["attempts"] += attempts
+            bucket["best_correct_points"] += max(0, min(3, best_correct))
+            bucket["possible_correct_points"] += 3
+            bucket["unresolved_mistakes"] += unresolved_by_lesson.get(lesson.lesson_id, 0)
+
+        objectives = list(objective_map.values())
+        for objective in objectives:
+            completion_ratio = objective["completed_count"] / max(1, objective["lesson_count"])
+            correctness_ratio = objective["best_correct_points"] / max(1, objective["possible_correct_points"])
+            score = round((completion_ratio * 0.55 + correctness_ratio * 0.45) * 100)
+            if objective["unresolved_mistakes"] > 0:
+                score = max(0, score - min(25, objective["unresolved_mistakes"] * 4))
+
+            if score >= 85:
+                status = "strong"
+            elif score >= 60:
+                status = "developing"
+            else:
+                status = "needs_focus"
+            objective["mastery_score"] = score
+            objective["status"] = status
+
+        objectives.sort(key=lambda item: (item["mastery_score"], item["objective_code"]))
+        return objectives
+
+    def _current_week_index(self, weekly_plan: list[dict[str, Any]]) -> int:
+        for index, week in enumerate(weekly_plan):
+            if week["completed_lesson_count"] < week["lesson_count"]:
+                return index
+        return max(0, len(weekly_plan) - 1)
+
+    def _weekly_plan_preview(self, weekly_plan: list[dict[str, Any]], window: int = 12) -> list[dict[str, Any]]:
+        if not weekly_plan:
+            return []
+        current_index = self._current_week_index(weekly_plan)
+        start = max(0, current_index - 1)
+        end = min(len(weekly_plan), start + max(1, window))
+        return weekly_plan[start:end]
 
     def _build_up_next(self, state: dict[str, Any], limit: int = 5) -> list[dict[str, Any]]:
         active_lessons = self._active_lessons(state)

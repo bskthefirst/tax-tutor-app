@@ -792,6 +792,37 @@ h3 {
   gap: 12px;
 }
 
+.mastery-objective-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.mastery-objective-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(35, 51, 72, 0.1);
+  background: rgba(255, 255, 255, 0.96);
+  padding: 6px 11px;
+  font-size: 0.82rem;
+}
+
+.mastery-objective-chip.status-needs_focus {
+  border-color: rgba(214, 66, 58, 0.25);
+  color: var(--accent-deep);
+}
+
+.mastery-objective-chip.status-developing {
+  border-color: rgba(242, 193, 103, 0.45);
+}
+
+.mastery-objective-chip.status-strong {
+  border-color: rgba(21, 104, 95, 0.35);
+  color: var(--green);
+}
+
 .mastery-chapter-chooser {
   display: flex;
   flex-wrap: wrap;

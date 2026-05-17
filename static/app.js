@@ -1,8 +1,13 @@
 const state = {
   data: null,
   loading: false,
+  loadingCourse: false,
+  loadingPlan: false,
   pageMode: "dashboard",
   dashboardView: "today",
+  courseLoaded: false,
+  planLoaded: false,
+  showFullPlan: false,
   masteryChapterNumber: null,
   lessonStage: null,
   lessonStageLessonId: null,
@@ -63,6 +68,11 @@ function setPageMode(mode) {
 
 function setDashboardView(view) {
   state.dashboardView = view;
+  if (view === "course") {
+    loadCourseData();
+  } else if (view === "plan") {
+    loadPlanData();
+  }
   if (state.data) {
     render(state.data);
   } else {
@@ -399,7 +409,7 @@ function renderResumeCard(appState) {
   }
 
   const completed = appState.completed_lesson_count || 0;
-  const hasSavedLesson = Boolean(appState.last_card);
+  const hasSavedLesson = Boolean(appState.has_saved_card || appState.last_card);
   const resumeLabel = completed ? "Continue where you left off" : "Your first lesson is ready";
   const resumeCopy = hasSavedLesson
     ? "Open your current lesson right where you stopped, with your place saved."
@@ -439,10 +449,29 @@ function renderWeeklyPlan(appState) {
     ? `Midterm mode is on for Chapters ${appState.midterm_mode.start_chapter}-${appState.midterm_mode.end_chapter}.`
     : "Midterm mode is off. The full course is in scope.";
 
+  const hasHiddenWeeks = (appState.weekly_plan_total_count || appState.weekly_plan.length) > appState.weekly_plan.length;
+  const showPlanToggle = hasHiddenWeeks || state.showFullPlan;
+  const weeksToRender =
+    state.showFullPlan || !hasHiddenWeeks
+      ? appState.weekly_plan
+      : appState.weekly_plan;
+
   weeklyPlan.innerHTML = `
     <p class="plan-note">${escapeHtml(scopeCopy)}</p>
+    ${
+      showPlanToggle
+        ? `
+          <div class="plan-note">
+            Showing ${weeksToRender.length} of ${appState.weekly_plan_total_count} weeks.
+            <button class="ghost-button compact-button" data-plan-toggle type="button">
+              ${state.showFullPlan ? "Show Less" : "Show Full Plan"}
+            </button>
+          </div>
+        `
+        : ""
+    }
     <div class="weekly-plan-list">
-      ${appState.weekly_plan
+      ${weeksToRender
         .map(
           (week) => `
             <div class="week-chip">
@@ -586,6 +615,7 @@ function renderMasteryMap(appState) {
     .slice(-3)
     .reverse();
   const completedCount = selectedChapter.lessons.filter((lesson) => lesson.completed).length;
+  const objectiveMastery = (appState.learning_objective_mastery || []).slice(0, 3);
   const chapterPercent = selectedUsesLiveMastery
     ? mastery.mastery_percent
     : selectedChapter.lesson_count
@@ -614,6 +644,22 @@ function renderMasteryMap(appState) {
       </div>
       <div class="chapter-progress-bar">
         <span style="width:${chapterPercent}%"></span>
+      </div>
+      <div class="mastery-objective-strip">
+        ${
+          objectiveMastery.length
+            ? objectiveMastery
+                .map(
+                  (objective) => `
+                    <div class="mastery-objective-chip status-${escapeHtml(objective.status)}">
+                      <strong>LO ${escapeHtml(objective.objective_code)}</strong>
+                      <span>${escapeHtml(objective.mastery_score)}%</span>
+                    </div>
+                  `
+                )
+                .join("")
+            : `<div class="empty-cardlet"><p>Objective mastery appears after objective-tagged lessons.</p></div>`
+        }
       </div>
       <div class="mastery-chapter-chooser">
         ${chapters
@@ -888,6 +934,17 @@ function renderCourseNavigator(appState) {
 }
 
 function renderCurriculum(appState) {
+  if (!state.courseLoaded) {
+    if (state.dashboardView === "course") {
+      loadCourseData();
+    }
+    curriculum.innerHTML = `
+      <div class="empty-cardlet">
+        <p>Loading full course map…</p>
+      </div>
+    `;
+    return;
+  }
   curriculum.innerHTML = appState.chapters
     .map((chapter) => {
       const progress = chapter.lesson_count
@@ -2157,7 +2214,65 @@ function render(appState) {
 async function fetchBootstrap() {
   const response = await fetch("/api/bootstrap");
   const data = await response.json();
+  state.courseLoaded = false;
+  state.planLoaded = false;
+  state.showFullPlan = false;
   render(data);
+}
+
+async function loadCourseData() {
+  if (!state.data || state.courseLoaded || state.loadingCourse) return;
+  state.loadingCourse = true;
+  try {
+    const response = await fetch("/api/course");
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || "Could not load course map.");
+    }
+    state.data = {
+      ...state.data,
+      chapters: data.chapters || [],
+      chapter_count: data.chapter_count || state.data.chapter_count,
+      lesson_count: data.lesson_count || state.data.lesson_count,
+      updated_at: data.updated_at || state.data.updated_at,
+    };
+    state.courseLoaded = true;
+    render(state.data);
+  } catch (error) {
+    setStatus(error.message || "Could not load the course map.", "error");
+  } finally {
+    state.loadingCourse = false;
+  }
+}
+
+async function loadPlanData() {
+  if (!state.data || state.planLoaded || state.loadingPlan) return;
+  state.loadingPlan = true;
+  try {
+    const response = await fetch("/api/plan");
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || "Could not load plan details.");
+    }
+    state.data = {
+      ...state.data,
+      weekly_goal_lessons: data.weekly_goal_lessons,
+      midterm_mode: data.midterm_mode,
+      weekly_plan: data.weekly_plan_preview || data.weekly_plan || [],
+      weekly_plan_total_count: data.weekly_plan_total_count || (data.weekly_plan || []).length,
+      weekly_plan_current_index: data.weekly_plan_current_index || 0,
+      weekly_plan_is_preview: true,
+      _weekly_plan_preview_cache: data.weekly_plan_preview || data.weekly_plan || [],
+      _weekly_plan_full_cache: data.weekly_plan || [],
+    };
+    state.planLoaded = true;
+    state.showFullPlan = false;
+    render(state.data);
+  } catch (error) {
+    setStatus(error.message || "Could not load full plan.", "error");
+  } finally {
+    state.loadingPlan = false;
+  }
 }
 
 async function runAction(action, payload = {}) {
@@ -2260,6 +2375,11 @@ async function runAction(action, payload = {}) {
       state.quizQuestionIndex = 0;
       state.quizQuestionLessonId = null;
       clearCompletionScreen();
+    }
+    state.planLoaded = false;
+    state.showFullPlan = false;
+    if (action !== "open_lesson") {
+      state.courseLoaded = false;
     }
     render(data.state);
     const successStatus = successStatusForAction(action, data.state);
@@ -2488,6 +2608,20 @@ document.addEventListener("click", (event) => {
   const inlineActionButton = event.target.closest("[data-inline-action]");
   if (inlineActionButton) {
     handleActionButton(inlineActionButton.dataset.inlineAction);
+    return;
+  }
+  const planToggle = event.target.closest("[data-plan-toggle]");
+  if (planToggle) {
+    if (state.showFullPlan) {
+      state.data.weekly_plan = state.data._weekly_plan_preview_cache || state.data.weekly_plan;
+      state.data.weekly_plan_is_preview = true;
+      state.showFullPlan = false;
+    } else {
+      state.data.weekly_plan = state.data._weekly_plan_full_cache || state.data.weekly_plan;
+      state.data.weekly_plan_is_preview = false;
+      state.showFullPlan = true;
+    }
+    render(state.data);
     return;
   }
   const flashcardButton = event.target.closest("[data-flashcard-rating]");

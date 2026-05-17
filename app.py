@@ -3,6 +3,8 @@ from __future__ import annotations
 import argparse
 import json
 import mimetypes
+import os
+import sys
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -13,7 +15,12 @@ from engine import TaxTutorEngine
 
 APP_ROOT = Path(__file__).resolve().parent
 STATIC_ROOT = APP_ROOT / "static"
-ENGINE = TaxTutorEngine(APP_ROOT)
+try:
+    ENGINE = TaxTutorEngine(APP_ROOT)
+except RuntimeError as exc:
+    # Startup should fail with a clear message when required textbook assets are missing.
+    print(str(exc), file=sys.stderr)
+    raise SystemExit(1) from exc
 
 
 class TaxTutorHandler(BaseHTTPRequestHandler):
@@ -26,6 +33,15 @@ class TaxTutorHandler(BaseHTTPRequestHandler):
             return
         if parsed.path == "/api/bootstrap":
             self._send_json(ENGINE.bootstrap())
+            return
+        if parsed.path == "/api/course":
+            self._send_json(ENGINE.course_payload())
+            return
+        if parsed.path == "/api/plan":
+            self._send_json(ENGINE.plan_payload())
+            return
+        if parsed.path == "/healthz":
+            self._send_json({"ok": True})
             return
         if parsed.path.startswith("/static/"):
             relative = parsed.path.removeprefix("/static/")
@@ -78,9 +94,10 @@ class TaxTutorHandler(BaseHTTPRequestHandler):
 
 
 def main() -> None:
+    default_host = "0.0.0.0" if os.environ.get("PORT") else "127.0.0.1"
     parser = argparse.ArgumentParser(description="Run the local Tax Tutor teaching app.")
-    parser.add_argument("--host", default="127.0.0.1")
-    parser.add_argument("--port", type=int, default=8765)
+    parser.add_argument("--host", default=os.environ.get("HOST", default_host))
+    parser.add_argument("--port", type=int, default=int(os.environ.get("PORT", "8765")))
     args = parser.parse_args()
 
     server = ThreadingHTTPServer((args.host, args.port), TaxTutorHandler)

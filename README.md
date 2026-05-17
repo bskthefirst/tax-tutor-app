@@ -17,10 +17,42 @@ This is a small local teaching app built around the cleaned `Taxation of Individ
 
 ```bash
 cd "/Users/suhyun/Documents/Auditing Poly/tax-tutor-app"
+python3 -m pip install -r requirements.txt
 python3 app.py
 ```
 
 Then open [http://127.0.0.1:8765](http://127.0.0.1:8765).
+
+## Environment variables
+
+- `TAX_TUTOR_ASSETS_ROOT`: optional absolute path to `tutor-assets`
+- `TAX_TUTOR_DATA_ROOT`: optional absolute path for runtime data (`study_state.json`, cache, schemas)
+- `PORT`: optional HTTP port for hosted environments
+- `HOST`: optional host bind address (defaults to `0.0.0.0` when `PORT` is set, else `127.0.0.1`)
+
+Example hosted-style run:
+
+```bash
+export TAX_TUTOR_ASSETS_ROOT="/path/to/textlayer-work/tutor-assets"
+export PORT=10000
+python3 app.py
+```
+
+## Deploy backend on Render
+
+`render.yaml` is included for a basic free-tier web service:
+
+```bash
+cd "/Users/suhyun/Documents/Auditing Poly/tax-tutor-app"
+git push
+```
+
+Then create a new Blueprint service in Render from this repository. Set `TAX_TUTOR_ASSETS_ROOT` in Render so it points to a mounted assets location that contains:
+
+- `prompt/tax-tutor-system-prompt.md`
+- `chapter_index.json`
+- `taxation-2025-chunks.jsonl`
+- `chapters/`
 
 ## Warm the cache
 
@@ -62,5 +94,5 @@ python3 warm_cache.py --start-chapter 1 --end-chapter 2
 
 - Study progress is stored in `data/study_state.json`.
 - Generated cards are cached in `data/cache/` so repeat clicks are faster and cheaper.
-- The app expects the packaged tutor assets in `/Users/suhyun/Documents/Auditing Poly/textlayer-work/tutor-assets`.
+- If `TAX_TUTOR_ASSETS_ROOT` is not set, the app defaults to `../textlayer-work/tutor-assets` relative to this repo.
 - The chapter overview is only the first card in a chapter, not the whole chapter. The chapter lesson list in the sidebar shows the deeper coverage.
