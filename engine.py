@@ -9,6 +9,8 @@ import shutil
 import subprocess
 import tempfile
 import threading
+import urllib.error
+import urllib.request
 from collections import OrderedDict
 from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta, timezone
@@ -1828,6 +1830,17 @@ class TaxTutorEngine:
         if cache_path and cache_path.exists():
             return json.loads(cache_path.read_text(encoding="utf-8"))
 
+        api_key = os.environ.get("OPENCODE_API_KEY", "").strip()
+        if api_key:
+            try:
+                response = self._run_openai_compatible_model(prompt, schema_path, api_key=api_key)
+                if cache_path:
+                    cache_path.write_text(json.dumps(response, indent=2), encoding="utf-8")
+                return response
+            except Exception:
+                # Keep current behavior: degrade gracefully to local/codex fallback.
+                pass
+
         if shutil.which("codex") is None:
             return self._fallback_response("local_mode", schema_path)
 
@@ -1879,6 +1892,55 @@ class TaxTutorEngine:
         if cache_path and success:
             cache_path.write_text(json.dumps(response, indent=2), encoding="utf-8")
         return response
+
+    def _run_openai_compatible_model(self, prompt: str, schema_path: Path, *, api_key: str) -> dict[str, Any]:
+        base_url = os.environ.get("OPENCODE_BASE_URL", "https://api.moonshot.ai/v1").strip().rstrip("/")
+        model = os.environ.get("OPENCODE_MODEL", "kimi-k2.6").strip() or "kimi-k2.6"
+        schema = json.loads(schema_path.read_text(encoding="utf-8"))
+        endpoint = f"{base_url}/chat/completions"
+        payload = {
+            "model": model,
+            "messages": [{"role": "user", "content": prompt}],
+            "response_format": {
+                "type": "json_schema",
+                "json_schema": {
+                    "name": "tax_tutor_schema",
+                    "strict": True,
+                    "schema": schema,
+                },
+            },
+            "thinking": {"type": "disabled"},
+        }
+        req = urllib.request.Request(
+            endpoint,
+            data=json.dumps(payload).encode("utf-8"),
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {api_key}",
+            },
+            method="POST",
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=120) as response:
+                raw = response.read().decode("utf-8")
+        except urllib.error.HTTPError as exc:
+            body = exc.read().decode("utf-8", errors="replace")
+            raise RuntimeError(f"OpenAI-compatible provider HTTP {exc.code}: {body[:300]}") from exc
+        data = json.loads(raw)
+        choices = data.get("choices") or []
+        if not choices:
+            raise RuntimeError("Provider returned no choices.")
+        message = choices[0].get("message") or {}
+        content = message.get("content")
+        if isinstance(content, list):
+            content = "".join(str(part.get("text", "")) if isinstance(part, dict) else str(part) for part in content)
+        if not isinstance(content, str) or not content.strip():
+            raise RuntimeError("Provider returned empty message content.")
+        text = content.strip()
+        if text.startswith("```"):
+            text = re.sub(r"^```(?:json)?\s*", "", text, flags=re.IGNORECASE).strip()
+            text = re.sub(r"\s*```$", "", text).strip()
+        return json.loads(text)
 
     def _fallback_response(self, error_message: str, schema_path: Path) -> dict[str, Any]:
         if schema_path == self.grade_schema_path:
