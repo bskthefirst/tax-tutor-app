@@ -54,6 +54,7 @@ class EngineAndApiTests(unittest.TestCase):
             "chapter_count",
             "lesson_count",
             "completed_lesson_count",
+            "completed_lessons",
             "current_lesson",
             "chapters",
             "weekly_plan",
@@ -198,6 +199,17 @@ class EngineAndApiTests(unittest.TestCase):
         result = self.engine.handle_action("hydrate_state", {"state": payload})
         self.assertGreaterEqual(result["state"]["completed_lesson_count"], 1)
         self.assertIn(lesson.lesson_id, self.engine._load_state()["completed_lessons"])  # pylint: disable=protected-access
+
+    def test_client_scoped_state_isolated(self) -> None:
+        lesson = self.engine.lessons[0]
+        client_a = "client_a"
+        client_b = "client_b"
+        self.engine.handle_action("open_lesson", {"lesson_id": lesson.lesson_id}, client_id=client_a)
+        self.engine.handle_action("complete_and_continue", {}, client_id=client_a)
+        payload_a = self.engine.bootstrap(client_id=client_a)
+        payload_b = self.engine.bootstrap(client_id=client_b)
+        self.assertIn(lesson.lesson_id, payload_a["completed_lessons"])
+        self.assertNotIn(lesson.lesson_id, payload_b["completed_lessons"])
 
 
 if __name__ == "__main__":

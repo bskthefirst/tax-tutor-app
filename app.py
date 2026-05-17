@@ -28,17 +28,18 @@ class TaxTutorHandler(BaseHTTPRequestHandler):
 
     def do_GET(self) -> None:
         parsed = urlparse(self.path)
+        client_id = self.headers.get("X-TaxTutor-Client", "").strip() or None
         if parsed.path == "/":
             self._serve_file(STATIC_ROOT / "index.html", "text/html; charset=utf-8")
             return
         if parsed.path == "/api/bootstrap":
-            self._send_json(ENGINE.bootstrap())
+            self._send_json(ENGINE.bootstrap(client_id=client_id))
             return
         if parsed.path == "/api/course":
-            self._send_json(ENGINE.course_payload())
+            self._send_json(ENGINE.course_payload(client_id=client_id))
             return
         if parsed.path == "/api/plan":
-            self._send_json(ENGINE.plan_payload())
+            self._send_json(ENGINE.plan_payload(client_id=client_id))
             return
         if parsed.path == "/healthz":
             self._send_json({"ok": True})
@@ -56,6 +57,7 @@ class TaxTutorHandler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:
         parsed = urlparse(self.path)
+        client_id = self.headers.get("X-TaxTutor-Client", "").strip() or None
         if parsed.path != "/api/action":
             self.send_error(HTTPStatus.NOT_FOUND)
             return
@@ -64,7 +66,7 @@ class TaxTutorHandler(BaseHTTPRequestHandler):
             length = int(self.headers.get("Content-Length", "0"))
             payload = json.loads(self.rfile.read(length).decode("utf-8") or "{}")
             action = str(payload.get("action", "")).strip()
-            response = ENGINE.handle_action(action, payload)
+            response = ENGINE.handle_action(action, payload, client_id=client_id)
             self._send_json(response)
         except KeyError as exc:
             self._send_json({"error": f"Unknown lesson: {exc}"}, status=HTTPStatus.BAD_REQUEST)

@@ -58,6 +58,25 @@ const dashboardViewTabs = Array.from(document.querySelectorAll("[data-dashboard-
 const actionButtons = Array.from(document.querySelectorAll("[data-action]"));
 const actionButtonMap = new Map(actionButtons.map((button) => [button.dataset.action, button]));
 const LOCAL_STATE_KEY = "tax_tutor_local_state_v1";
+const CLIENT_ID_KEY = "tax_tutor_client_id_v1";
+
+function getOrCreateClientId() {
+  try {
+    const existing = window.localStorage.getItem(CLIENT_ID_KEY);
+    if (existing) return existing;
+    const generated = `client_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
+    window.localStorage.setItem(CLIENT_ID_KEY, generated);
+    return generated;
+  } catch (error) {
+    return `client_ephemeral_${Date.now().toString(36)}`;
+  }
+}
+
+function apiFetch(url, options = {}) {
+  const headers = new Headers(options.headers || {});
+  headers.set("X-TaxTutor-Client", getOrCreateClientId());
+  return fetch(url, { ...options, headers });
+}
 
 function loadLocalStateSnapshot() {
   try {
@@ -76,10 +95,7 @@ function saveLocalStateSnapshot(appState) {
   try {
     const snapshot = {
       current_lesson_id: appState.current_lesson?.lesson_id || null,
-      completed_lessons: (appState.chapters || [])
-        .flatMap((chapter) => chapter.lessons || [])
-        .filter((lesson) => lesson.completed)
-        .map((lesson) => lesson.lesson_id),
+      completed_lessons: Array.isArray(appState.completed_lessons) ? appState.completed_lessons : [],
       last_card: appState.last_card || null,
       flashcards: appState.flashcards || {},
       lesson_performance: appState.lesson_performance || {},
@@ -99,11 +115,17 @@ async function hydrateStateFromLocal(bootstrapState) {
   if (!localState) return bootstrapState;
   const localTs = Date.parse(localState.updated_at || "");
   const serverTs = Date.parse(bootstrapState?.updated_at || "");
-  if (Number.isFinite(serverTs) && Number.isFinite(localTs) && localTs <= serverTs) {
+  const localHasProgress = Boolean((localState.completed_lessons || []).length || localState.last_card);
+  const serverHasProgress = Boolean((bootstrapState?.completed_lessons || []).length || bootstrapState?.has_saved_card);
+  if (serverHasProgress) {
+    if (Number.isFinite(serverTs) && Number.isFinite(localTs) && localTs <= serverTs) {
+      return bootstrapState;
+    }
+  } else if (!localHasProgress) {
     return bootstrapState;
   }
   try {
-    const response = await fetch("/api/action", {
+    const response = await apiFetch("/api/action", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action: "hydrate_state", state: localState }),
@@ -2280,7 +2302,7 @@ function render(appState) {
 }
 
 async function fetchBootstrap() {
-  const response = await fetch("/api/bootstrap");
+  const response = await apiFetch("/api/bootstrap");
   const bootstrapState = await response.json();
   const data = await hydrateStateFromLocal(bootstrapState);
   state.courseLoaded = false;
@@ -2293,7 +2315,7 @@ async function loadCourseData() {
   if (!state.data || state.courseLoaded || state.loadingCourse) return;
   state.loadingCourse = true;
   try {
-    const response = await fetch("/api/course");
+    const response = await apiFetch("/api/course");
     const data = await response.json();
     if (!response.ok) {
       throw new Error(data.error || "Could not load course map.");
@@ -2318,7 +2340,7 @@ async function loadPlanData() {
   if (!state.data || state.planLoaded || state.loadingPlan) return;
   state.loadingPlan = true;
   try {
-    const response = await fetch("/api/plan");
+    const response = await apiFetch("/api/plan");
     const data = await response.json();
     if (!response.ok) {
       throw new Error(data.error || "Could not load plan details.");
@@ -2355,7 +2377,7 @@ async function runAction(action, payload = {}) {
   const previousCard = state.data?.last_card ? JSON.parse(JSON.stringify(state.data.last_card)) : null;
 
   try {
-    const response = await fetch("/api/action", {
+    const response = await apiFetch("/api/action", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action, ...payload }),
@@ -2502,7 +2524,7 @@ function successStatusForAction(action, appState) {
       feedback.correct_count ||
       feedback.question_feedback.filter((item) => String(item.verdict).toLowerCase() === "correct").length;
     return {
-      message: `Quiz graded: ${correct}/${total} right.`,
+      message: `Quiz graded: ${correct}/${total} right. Lesson progress saved.`,
       kind: correct === total ? "celebrate" : "info",
     };
   }

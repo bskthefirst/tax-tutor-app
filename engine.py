@@ -516,9 +516,9 @@ class TaxTutorEngine:
         self.lesson_schema_path.write_text(json.dumps(lesson_schema, indent=2) + "\n", encoding="utf-8")
         self.grade_schema_path.write_text(json.dumps(grade_schema, indent=2) + "\n", encoding="utf-8")
 
-    def bootstrap(self) -> dict[str, Any]:
+    def bootstrap(self, client_id: str | None = None) -> dict[str, Any]:
         with self.lock:
-            state = self._load_state()
+            state = self._load_state(client_id=client_id)
             payload = self._compose_state(
                 state,
                 include_course=False,
@@ -528,9 +528,9 @@ class TaxTutorEngine:
         self._start_initial_warm(state)
         return payload
 
-    def course_payload(self) -> dict[str, Any]:
+    def course_payload(self, client_id: str | None = None) -> dict[str, Any]:
         with self.lock:
-            state = self._load_state()
+            state = self._load_state(client_id=client_id)
             payload = self._compose_state(
                 state,
                 include_course=True,
@@ -544,9 +544,9 @@ class TaxTutorEngine:
             "updated_at": payload["updated_at"],
         }
 
-    def plan_payload(self) -> dict[str, Any]:
+    def plan_payload(self, client_id: str | None = None) -> dict[str, Any]:
         with self.lock:
-            state = self._load_state()
+            state = self._load_state(client_id=client_id)
             active_lessons = self._active_lessons(state)
             weekly_plan = self._build_weekly_plan(state, active_lessons)
             current_index = self._current_week_index(weekly_plan)
@@ -561,10 +561,10 @@ class TaxTutorEngine:
             "updated_at": state.get("updated_at"),
         }
 
-    def handle_action(self, action: str, payload: dict[str, Any] | None = None) -> dict[str, Any]:
+    def handle_action(self, action: str, payload: dict[str, Any] | None = None, client_id: str | None = None) -> dict[str, Any]:
         payload = payload or {}
         with self.lock:
-            state = self._load_state()
+            state = self._load_state(client_id=client_id)
             card: dict[str, Any] | None = None
             clear_last_card = False
 
@@ -667,7 +667,7 @@ class TaxTutorEngine:
             elif card is not None:
                 state["last_card"] = card
             state["updated_at"] = self._now()
-            self._save_state(state)
+            self._save_state(state, client_id=client_id)
             return {"state": self._compose_state(state), "card": card}
 
     def _default_state(self) -> dict[str, Any]:
@@ -687,10 +687,20 @@ class TaxTutorEngine:
             },
         }
 
-    def _load_state(self) -> dict[str, Any]:
-        if not self.state_path.exists():
+    def _state_path_for_client(self, client_id: str | None = None) -> Path:
+        if not client_id:
+            return self.state_path
+        safe = "".join(ch for ch in str(client_id).lower() if ch.isalnum() or ch in {"-", "_"})
+        safe = safe[:64].strip("-_")
+        if not safe:
+            return self.state_path
+        return self.data_root / f"study_state_{safe}.json"
+
+    def _load_state(self, client_id: str | None = None) -> dict[str, Any]:
+        path = self._state_path_for_client(client_id)
+        if not path.exists():
             return self._default_state()
-        loaded = json.loads(self.state_path.read_text(encoding="utf-8"))
+        loaded = json.loads(path.read_text(encoding="utf-8"))
         return self._normalize_state(loaded)
 
     def _normalize_state(self, state: dict[str, Any]) -> dict[str, Any]:
@@ -779,8 +789,9 @@ class TaxTutorEngine:
             normalized_card["chapter_title"] = lesson.chapter_title
         return normalized_card
 
-    def _save_state(self, state: dict[str, Any]) -> None:
-        self.state_path.write_text(json.dumps(state, indent=2), encoding="utf-8")
+    def _save_state(self, state: dict[str, Any], client_id: str | None = None) -> None:
+        path = self._state_path_for_client(client_id)
+        path.write_text(json.dumps(state, indent=2), encoding="utf-8")
 
     def _now(self) -> str:
         return datetime.now(timezone.utc).isoformat()
@@ -899,6 +910,7 @@ class TaxTutorEngine:
             "chapter_count": len(self.chapter_index),
             "lesson_count": len(active_lessons),
             "completed_lesson_count": len([lesson_id for lesson_id in completed if lesson_id in active_lesson_ids]),
+            "completed_lessons": [lesson_id for lesson_id in state["completed_lessons"] if lesson_id in active_lesson_ids],
             "current_lesson": current_payload,
             "has_saved_card": bool(state.get("last_card")),
             "last_card": state.get("last_card") if include_last_card else None,
