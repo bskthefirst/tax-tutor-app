@@ -5,6 +5,7 @@ import hashlib
 import json
 import os
 import re
+import shutil
 import subprocess
 import tempfile
 import threading
@@ -1827,6 +1828,9 @@ class TaxTutorEngine:
         if cache_path and cache_path.exists():
             return json.loads(cache_path.read_text(encoding="utf-8"))
 
+        if shutil.which("codex") is None:
+            return self._fallback_response("local_mode", schema_path)
+
         success = False
         try:
             with tempfile.NamedTemporaryFile("w+", suffix=".json", delete=False, encoding="utf-8") as out_file:
@@ -1879,12 +1883,12 @@ class TaxTutorEngine:
     def _fallback_response(self, error_message: str, schema_path: Path) -> dict[str, Any]:
         if schema_path == self.grade_schema_path:
             return {
-                "overall_summary": "I could not grade this with the model cleanly, so use the ideal answers as the study guide.",
+                "overall_summary": "Local grading mode was used. Use the ideal answers as your study guide.",
                 "question_feedback": [
                     {
                         "question_number": 1,
                         "verdict": "not graded",
-                        "explanation": f"Model fallback: {error_message[:160]}",
+                        "explanation": "Local grading fallback was used.",
                         "ideal_answer": "Review the lesson text and source chunks, then try again.",
                     },
                     {
@@ -1904,16 +1908,16 @@ class TaxTutorEngine:
             }
         return {
             "card_type": "lesson",
-            "title": "Textbook-Based Fallback",
-            "subtitle": "Codex was unavailable, so this card is a simpler local fallback.",
-            "intro": "I could not reach the teaching model cleanly, so I am falling back to a simpler textbook-based card.",
+            "title": "Textbook-Based Lesson",
+            "subtitle": "Generated from your local textbook data.",
+            "intro": "This lesson is running in local textbook mode.",
             "scope_note": "This is only one lesson card, not the whole chapter.",
             "teaching_points": [
                 "Use the source chunk previews below as the main study material.",
                 "Read the headings first so you know the shape of the topic.",
                 "Restate each rule in your own words after each paragraph.",
-                f"Technical detail: {error_message[:180]}",
-                "Try the teaching action again in a moment for a richer lesson.",
+                "Write a 2-line summary before moving to the quiz.",
+                "Use quiz feedback to strengthen your notes.",
             ],
             "worked_example": [
                 "Read one paragraph slowly.",
