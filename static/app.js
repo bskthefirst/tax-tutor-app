@@ -1899,6 +1899,7 @@ function renderQuizPanel(card, isQuizGraded) {
 }
 
 function renderReviewPanel(card) {
+  const cumulativeQuiz = Array.isArray(card.cumulative_mini_quiz) ? card.cumulative_mini_quiz : [];
   return `
     <section class="section-block stage-panel">
       <div class="panel-header">
@@ -1921,6 +1922,28 @@ function renderReviewPanel(card) {
         <strong>Flashcards are already open in the Lesson tab.</strong>
         <p>Use them while you read the explanation, then come back here when you want a quick recap.</p>
       </div>
+      ${
+        cumulativeQuiz.length
+          ? `
+            <section class="section-block accent nested-panel">
+              <h3>2-Question Cumulative Check</h3>
+              <p>Quickly revisit prior lessons before you move on.</p>
+              <ol class="number-list">
+                ${cumulativeQuiz
+                  .map(
+                    (item) => `
+                      <li>
+                        <strong>${escapeHtml(item.prompt)}</strong>
+                        <p><strong>Best answer:</strong> ${escapeHtml(item.correct_option)} · ${escapeHtml(item.study_answer)}</p>
+                      </li>
+                    `
+                  )
+                  .join("")}
+              </ol>
+            </section>
+          `
+          : ""
+      }
     </section>
   `;
 }
@@ -2172,6 +2195,7 @@ function renderCard(card) {
   const progressPercent = total ? Math.max(4, Math.round((position / total) * 100)) : 0;
   const sourcePages = card.citations?.[0]?.pages || "Textbook grounded";
   const lessonKindLabel = toTitleCase(card.lesson_kind);
+  const integrityBadge = state.data?.current_lesson?.completion_quality?.label || "In progress";
   ensureLessonStage(card);
   const activeStage = state.lessonStage;
   let stagePanel = renderLearnPanel(card);
@@ -2188,8 +2212,12 @@ function renderCard(card) {
           <p class="eyebrow">Study Mode</p>
           <strong>Chapter ${escapeHtml(card.chapter_number)} · Lesson ${escapeHtml(position)}/${escapeHtml(total)}</strong>
           <p class="study-meta-line">${escapeHtml(lessonKindLabel)} · PDF pp. ${escapeHtml(sourcePages)}</p>
+          <p class="study-meta-line">${escapeHtml(card.exam_day_why || "")}</p>
         </div>
-        <span class="mini-pill">${escapeHtml(toTitleCase(activeStage))}</span>
+        <div>
+          <span class="mini-pill">${escapeHtml(toTitleCase(activeStage))}</span>
+          <span class="mini-pill">${escapeHtml(integrityBadge)}</span>
+        </div>
       </div>
 
       <div class="study-title-block">
@@ -2552,6 +2580,16 @@ function successStatusForAction(action, appState) {
 }
 
 function handleActionButton(action) {
+  if (action === "complete_and_continue") {
+    const recallText = window.prompt("Before moving on, write one sentence that states the core rule from this lesson:");
+    if (recallText == null) return;
+    if (recallText.trim().split(/\s+/).filter(Boolean).length < 4) {
+      setStatus("Please write one clear sentence (at least 4 words) before continuing.", "error");
+      return;
+    }
+    runAction(action, { recall_text: recallText.trim() });
+    return;
+  }
   if (action === "quiz_me" && currentCardHasQuiz() && !currentQuizIsGraded()) {
     state.pageMode = "study";
     clearCompletionScreen();

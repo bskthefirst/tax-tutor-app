@@ -182,6 +182,7 @@ class EngineAndApiTests(unittest.TestCase):
         completed = result["state"]["completed_lesson_count"]
         self.assertGreaterEqual(completed, 1)
         self.assertIn(lesson.lesson_id, self.engine._load_state()["completed_lessons"])  # pylint: disable=protected-access
+        self.assertIn("cumulative_mini_quiz", result["card"])
 
     def test_hydrate_state_restores_completion(self) -> None:
         lesson = self.engine.lessons[0]
@@ -200,12 +201,27 @@ class EngineAndApiTests(unittest.TestCase):
         self.assertGreaterEqual(result["state"]["completed_lesson_count"], 1)
         self.assertIn(lesson.lesson_id, self.engine._load_state()["completed_lessons"])  # pylint: disable=protected-access
 
+    def test_complete_and_continue_requires_recall_sentence(self) -> None:
+        lesson = self.engine.lessons[0]
+        self.engine.handle_action("open_lesson", {"lesson_id": lesson.lesson_id})
+        with self.assertRaises(ValueError):
+            self.engine.handle_action("complete_and_continue", {"recall_text": "too short"})
+        result = self.engine.handle_action(
+            "complete_and_continue",
+            {"recall_text": "The rule applies when the taxable trigger is present."},
+        )
+        self.assertGreaterEqual(result["state"]["completed_lesson_count"], 1)
+
     def test_client_scoped_state_isolated(self) -> None:
         lesson = self.engine.lessons[0]
         client_a = "client_a"
         client_b = "client_b"
         self.engine.handle_action("open_lesson", {"lesson_id": lesson.lesson_id}, client_id=client_a)
-        self.engine.handle_action("complete_and_continue", {}, client_id=client_a)
+        self.engine.handle_action(
+            "complete_and_continue",
+            {"recall_text": "This rule applies when the triggering tax fact is present."},
+            client_id=client_a,
+        )
         payload_a = self.engine.bootstrap(client_id=client_a)
         payload_b = self.engine.bootstrap(client_id=client_b)
         self.assertIn(lesson.lesson_id, payload_a["completed_lessons"])

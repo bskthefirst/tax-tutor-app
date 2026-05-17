@@ -582,9 +582,15 @@ class TaxTutorEngine:
                 card = self._build_lesson_card(lesson, mode="lesson", state=state)
             elif action == "complete_and_continue":
                 current = self._require_current_lesson(state)
+                recall_text = str(payload.get("recall_text", "")).strip()
+                if len(recall_text.split()) < 4:
+                    raise ValueError("Before continuing, write one sentence (at least 4 words) that explains the core rule.")
                 if current.lesson_id not in state["completed_lessons"]:
                     state["completed_lessons"].append(current.lesson_id)
                 self._mark_lesson_completed(state, current.lesson_id)
+                perf = state["lesson_performance"].setdefault(current.lesson_id, {})
+                perf["last_recall_text"] = recall_text
+                perf["last_recall_at"] = self._now()
                 remaining_lessons = [lesson for lesson in self._active_lessons(state) if lesson.lesson_id not in state["completed_lessons"]]
                 if remaining_lessons:
                     next_lesson = self._resolve_next_lesson(state, after_lesson_id=current.lesson_id)
@@ -628,6 +634,7 @@ class TaxTutorEngine:
                 lesson = self._require_current_lesson(state)
                 answers = payload.get("answers") or []
                 card = self._grade_quiz_for_current_card(state, lesson, answers)
+                card["cumulative_mini_quiz"] = self._build_cumulative_mini_quiz(state, lesson.lesson_id)
                 # Auto-save milestone: grading a quiz marks the current lesson complete.
                 if lesson.lesson_id not in state["completed_lessons"]:
                     state["completed_lessons"].append(lesson.lesson_id)
@@ -901,6 +908,7 @@ class TaxTutorEngine:
             position, total = self.lesson_positions[current_lesson.lesson_id]
             current_payload["position_in_chapter"] = position
             current_payload["chapter_lesson_total"] = total
+            current_payload["completion_quality"] = self._lesson_integrity_badge(state, current_lesson.lesson_id)
         upcoming_lessons = self._build_up_next(state, limit=5)
         today_assignment = self._build_today_assignment(state, current_lesson, upcoming_lessons)
         chapter_mastery = self._build_chapter_mastery(state, current_lesson)
@@ -934,7 +942,27 @@ class TaxTutorEngine:
             "flashcard_total_count": len(state["flashcards"]),
             "flashcards_due_count": len(self._due_flashcards(state)),
             "next_due_flashcard": next_flashcard,
+            "lesson_integrity_counts": self._lesson_integrity_counts(state),
         }
+
+    def _lesson_integrity_badge(self, state: dict[str, Any], lesson_id: str) -> dict[str, str]:
+        perf = state["lesson_performance"].get(lesson_id, {})
+        attempts = int(perf.get("attempts", 0) or 0)
+        best_correct = int(perf.get("best_correct_count", 0) or 0)
+        completed = lesson_id in state["completed_lessons"]
+        if completed and attempts > 0 and best_correct >= 2:
+            return {"status": "with_pass", "label": "Completed with quiz passed"}
+        if completed:
+            return {"status": "without_pass", "label": "Completed without pass"}
+        return {"status": "in_progress", "label": "In progress"}
+
+    def _lesson_integrity_counts(self, state: dict[str, Any]) -> dict[str, int]:
+        counts = {"with_pass": 0, "without_pass": 0}
+        for lesson_id in state["completed_lessons"]:
+            status = self._lesson_integrity_badge(state, lesson_id).get("status")
+            if status in counts:
+                counts[status] += 1
+        return counts
 
     def _build_learning_objective_mastery(self, state: dict[str, Any]) -> list[dict[str, Any]]:
         objective_map: dict[str, dict[str, Any]] = {}
@@ -2186,6 +2214,7 @@ class TaxTutorEngine:
             "card_type": card.get("card_type", lesson.lesson_kind).strip(),
             "title": card.get("title", lesson.title).strip(),
             "subtitle": card.get("subtitle", f"Chapter {lesson.chapter_number}: {lesson.chapter_title}").strip(),
+            "exam_day_why": card.get("exam_day_why", f"On exam day, this lesson helps you avoid traps in {lesson.chapter_title.lower()} and pick the correct rule quickly.").strip(),
             "intro": card.get("intro", "").strip(),
             "scope_note": card.get("scope_note", f"This is lesson {position} of {total} in Chapter {lesson.chapter_number}, not the whole chapter.").strip(),
             "teaching_points": [item.strip() for item in card.get("teaching_points", []) if item.strip()],
@@ -2203,6 +2232,32 @@ class TaxTutorEngine:
             },
             "reopen_lesson_id": lesson.lesson_id if lesson.lesson_id in self.lesson_lookup else None,
         }
+
+    def _build_cumulative_mini_quiz(self, state: dict[str, Any], current_lesson_id: str) -> list[dict[str, Any]]:
+        prior_ids = [lesson_id for lesson_id in state["completed_lessons"] if lesson_id != current_lesson_id and lesson_id in self.lesson_lookup]
+        if not prior_ids:
+            return []
+        picks = prior_ids[-2:]
+        items: list[dict[str, Any]] = []
+        for lesson_id in picks:
+            lesson = self.lesson_lookup[lesson_id]
+            options = [
+                {"label": "A", "text": f"Apply {lesson.title} when the facts match its trigger."},
+                {"label": "B", "text": "Ignore trigger words and choose the longest option."},
+                {"label": "C", "text": "Use the first chapter rule you remember."},
+                {"label": "D", "text": "Skip rule matching and estimate from memory only."},
+                {"label": "E", "text": "Choose whichever option has numbers."},
+            ]
+            items.append(
+                {
+                    "question_id": f"cum-{lesson.lesson_id}",
+                    "prompt": f"Cumulative check: when should you apply the rule from '{lesson.title}'?",
+                    "correct_option": "A",
+                    "study_answer": f"Apply the rule only when its trigger conditions are present: {lesson.learning_goal}.",
+                    "options": options,
+                }
+            )
+        return items
 
     def _flashcard_id(self, lesson_id: str, prompt: str, index: int) -> str:
         raw = json.dumps({"lesson_id": lesson_id, "prompt": prompt, "index": index}, sort_keys=True)
