@@ -1929,49 +1929,87 @@ class TaxTutorEngine:
         model = os.environ.get("OPENCODE_MODEL", "kimi-k2.6").strip() or "kimi-k2.6"
         schema = json.loads(schema_path.read_text(encoding="utf-8"))
         endpoint = f"{base_url}/chat/completions"
-        payload = {
-            "model": model,
-            "messages": [{"role": "user", "content": prompt}],
-            "response_format": {
-                "type": "json_schema",
-                "json_schema": {
-                    "name": "tax_tutor_schema",
-                    "strict": True,
-                    "schema": schema,
+
+        # Try multiple compatibility modes before giving up.
+        requests: list[dict[str, Any]] = [
+            {
+                "model": model,
+                "messages": [{"role": "user", "content": prompt}],
+                "response_format": {
+                    "type": "json_schema",
+                    "json_schema": {
+                        "name": "tax_tutor_schema",
+                        "strict": True,
+                        "schema": schema,
+                    },
                 },
+                "thinking": {"type": "disabled"},
             },
-            "thinking": {"type": "disabled"},
-        }
-        req = urllib.request.Request(
-            endpoint,
-            data=json.dumps(payload).encode("utf-8"),
-            headers={
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {api_key}",
+            {
+                "model": model,
+                "messages": [{"role": "user", "content": prompt}],
+                "response_format": {"type": "json_object"},
+                "thinking": {"type": "disabled"},
             },
-            method="POST",
-        )
-        try:
-            with urllib.request.urlopen(req, timeout=120) as response:
-                raw = response.read().decode("utf-8")
-        except urllib.error.HTTPError as exc:
-            body = exc.read().decode("utf-8", errors="replace")
-            raise RuntimeError(f"OpenAI-compatible provider HTTP {exc.code}: {body[:300]}") from exc
-        data = json.loads(raw)
-        choices = data.get("choices") or []
-        if not choices:
-            raise RuntimeError("Provider returned no choices.")
-        message = choices[0].get("message") or {}
-        content = message.get("content")
-        if isinstance(content, list):
-            content = "".join(str(part.get("text", "")) if isinstance(part, dict) else str(part) for part in content)
-        if not isinstance(content, str) or not content.strip():
-            raise RuntimeError("Provider returned empty message content.")
-        text = content.strip()
-        if text.startswith("```"):
-            text = re.sub(r"^```(?:json)?\s*", "", text, flags=re.IGNORECASE).strip()
-            text = re.sub(r"\s*```$", "", text).strip()
-        return json.loads(text)
+            {
+                "model": model,
+                "messages": [
+                    {
+                        "role": "user",
+                        "content": (
+                            f"{prompt}\n\nReturn ONLY valid JSON matching this schema exactly:\n"
+                            f"{json.dumps(schema, ensure_ascii=True)}"
+                        ),
+                    }
+                ],
+                "thinking": {"type": "disabled"},
+            },
+        ]
+
+        last_error = "unknown provider error"
+        for payload in requests:
+            req = urllib.request.Request(
+                endpoint,
+                data=json.dumps(payload).encode("utf-8"),
+                headers={
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {api_key}",
+                },
+                method="POST",
+            )
+            try:
+                with urllib.request.urlopen(req, timeout=120) as response:
+                    raw = response.read().decode("utf-8")
+                data = json.loads(raw)
+                choices = data.get("choices") or []
+                if not choices:
+                    raise RuntimeError("Provider returned no choices.")
+                message = choices[0].get("message") or {}
+                content = message.get("content")
+                if isinstance(content, list):
+                    content = "".join(str(part.get("text", "")) if isinstance(part, dict) else str(part) for part in content)
+                if not isinstance(content, str) or not content.strip():
+                    raise RuntimeError("Provider returned empty message content.")
+                text = content.strip()
+                if text.startswith("```"):
+                    text = re.sub(r"^```(?:json)?\s*", "", text, flags=re.IGNORECASE).strip()
+                    text = re.sub(r"\s*```$", "", text).strip()
+                try:
+                    return json.loads(text)
+                except json.JSONDecodeError:
+                    start = text.find("{")
+                    end = text.rfind("}")
+                    if start >= 0 and end > start:
+                        return json.loads(text[start : end + 1])
+                    raise
+            except urllib.error.HTTPError as exc:
+                body = exc.read().decode("utf-8", errors="replace")
+                last_error = f"OpenAI-compatible provider HTTP {exc.code}: {body[:300]}"
+            except Exception as exc:
+                last_error = str(exc)
+                continue
+
+        raise RuntimeError(last_error)
 
     def _fallback_response(self, error_message: str, schema_path: Path) -> dict[str, Any]:
         if schema_path == self.grade_schema_path:
