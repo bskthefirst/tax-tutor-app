@@ -19,18 +19,9 @@ if [[ -f ".env.local" ]]; then
 fi
 
 export OPENCODE_BASE_URL="${OPENCODE_BASE_URL:-https://api.moonshot.ai/v1}"
-export OPENCODE_MODEL="${OPENCODE_MODEL:-kimi-k2.6}"
-
-if [[ -z "${OPENCODE_API_KEY:-}" ]]; then
-  echo "OPENCODE_API_KEY is not set."
-  read -r -s -p "Paste OPENCODE_API_KEY: " OPENCODE_API_KEY
-  echo
-  if [[ -z "${OPENCODE_API_KEY}" ]]; then
-    echo "No key provided. Exiting."
-    exit 1
-  fi
-  export OPENCODE_API_KEY
-fi
+export TAX_TUTOR_OPENCODE_MODEL="${TAX_TUTOR_OPENCODE_MODEL:-opencode/qwen3.6-plus-free}"
+export MOONSHOT_URL="${MOONSHOT_URL:-$OPENCODE_BASE_URL}"
+export MOONSHOT_MODEL="${MOONSHOT_MODEL:-kimi-k2.6}"
 
 python3 -m pip install -r requirements.txt
 exec python3 app.py

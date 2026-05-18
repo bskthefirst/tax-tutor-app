@@ -2196,6 +2196,17 @@ function renderCard(card) {
   const sourcePages = card.citations?.[0]?.pages || "Textbook grounded";
   const lessonKindLabel = toTitleCase(card.lesson_kind);
   const integrityBadge = state.data?.current_lesson?.completion_quality?.label || "In progress";
+  const providerMode = card.provider_mode || "fallback";
+  const generationBackend = card.generation_backend || "unknown";
+  const modelBadge =
+    generationBackend === "opencode"
+      ? "Model: OpenCode"
+      : generationBackend === "moonshot"
+        ? "Model: Moonshot"
+        : generationBackend === "codex"
+          ? "Model: Codex"
+          : "Model: Local";
+  const modeBadge = providerMode === "provider" ? "Mode: provider" : "Mode: fallback";
   ensureLessonStage(card);
   const activeStage = state.lessonStage;
   let stagePanel = renderLearnPanel(card);
@@ -2217,6 +2228,8 @@ function renderCard(card) {
         <div>
           <span class="mini-pill">${escapeHtml(toTitleCase(activeStage))}</span>
           <span class="mini-pill">${escapeHtml(integrityBadge)}</span>
+          <span class="mini-pill">${escapeHtml(modelBadge)}</span>
+          <span class="mini-pill">${escapeHtml(modeBadge)}</span>
         </div>
       </div>
 

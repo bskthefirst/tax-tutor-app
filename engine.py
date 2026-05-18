@@ -25,7 +25,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import linear_kernel
 
 
-CACHE_VERSION = "v7"
+CACHE_VERSION = "v8"
 HEADING_RE = re.compile(r"^(#{1,6})\s+(.+?)\s*$")
 PSEUDO_EXAMPLE_RE = re.compile(r"^-+\s*Example\s*-+\s*(\d+-\d+)\s*$", re.IGNORECASE)
 PDF_PAGE_RE = re.compile(r"PDF page (\d+)")
@@ -1862,10 +1862,29 @@ class TaxTutorEngine:
             return json.loads(cache_path.read_text(encoding="utf-8"))
 
         provider_error: str | None = None
-        api_key = os.environ.get("OPENCODE_API_KEY", "").strip()
+        if shutil.which("opencode") is not None:
+            try:
+                response = self._run_opencode_cli_model(prompt, schema_path)
+                if isinstance(response, dict):
+                    response["provider_mode"] = "provider"
+                    response["generation_backend"] = "opencode"
+                if cache_path:
+                    cache_path.write_text(json.dumps(response, indent=2), encoding="utf-8")
+                return response
+            except Exception as exc:
+                provider_error = f"{type(exc).__name__}: {exc}"
+                print(f"[tax-tutor] OpenCode CLI failed, trying fallback provider. {provider_error}", file=sys.stderr)
+
+        api_key = (
+            os.environ.get("OPENCODE_API_KEY", "").strip()
+            or os.environ.get("MOONSHOT_API_KEY", "").strip()
+        )
         if api_key:
             try:
                 response = self._run_openai_compatible_model(prompt, schema_path, api_key=api_key)
+                if isinstance(response, dict):
+                    response["provider_mode"] = "provider"
+                    response["generation_backend"] = "moonshot"
                 if cache_path:
                     cache_path.write_text(json.dumps(response, indent=2), encoding="utf-8")
                 return response
@@ -1913,6 +1932,9 @@ class TaxTutorEngine:
             if completed.returncode != 0:
                 raise RuntimeError(completed.stderr.strip() or completed.stdout.strip() or "Codex command failed.")
             response = json.loads(out_path.read_text(encoding="utf-8").strip())
+            if isinstance(response, dict):
+                response["provider_mode"] = "provider"
+                response["generation_backend"] = "codex"
             success = True
         except Exception as exc:
             response = self._fallback_response(str(exc), schema_path)
@@ -1926,9 +1948,85 @@ class TaxTutorEngine:
             cache_path.write_text(json.dumps(response, indent=2), encoding="utf-8")
         return response
 
+    def _run_opencode_cli_model(self, prompt: str, schema_path: Path) -> dict[str, Any]:
+        candidate_model = (
+            os.environ.get("TAX_TUTOR_OPENCODE_MODEL", "").strip()
+            or os.environ.get("OPENCODE_MODEL", "").strip()
+            or os.environ.get("MOONSHOT_MODEL", "").strip()
+            or "opencode/qwen3.6-plus-free"
+        )
+        model = candidate_model if candidate_model.startswith("opencode/") else "opencode/qwen3.6-plus-free"
+        schema = json.loads(schema_path.read_text(encoding="utf-8"))
+        opencode_prompt = (
+            f"{prompt}\n\nReturn ONLY valid JSON matching this schema exactly:\n"
+            f"{json.dumps(schema, ensure_ascii=True)}"
+        )
+        cmd = [
+            "opencode",
+            "run",
+            "--format",
+            "json",
+            "--model",
+            model,
+            opencode_prompt,
+        ]
+        completed = subprocess.run(
+            cmd,
+            text=True,
+            capture_output=True,
+            timeout=180,
+            check=False,
+        )
+        if completed.returncode != 0:
+            raise RuntimeError(completed.stderr.strip() or completed.stdout.strip() or "OpenCode CLI failed.")
+        text = self._extract_opencode_text(completed.stdout)
+        try:
+            return self._parse_schema_json(text)
+        except Exception as exc:
+            raise RuntimeError(f"OpenCode returned non-JSON output: {exc}") from exc
+
+    def _extract_opencode_text(self, output: str) -> str:
+        parts: list[str] = []
+        for raw_line in output.splitlines():
+            line = raw_line.strip()
+            if not line:
+                continue
+            try:
+                event = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if event.get("type") != "text":
+                continue
+            part = event.get("part") or {}
+            text = part.get("text")
+            if isinstance(text, str) and text.strip():
+                parts.append(text)
+        text = "".join(parts).strip()
+        if not text:
+            raise RuntimeError("OpenCode returned no text content.")
+        return text
+
+    def _parse_schema_json(self, text: str) -> dict[str, Any]:
+        cleaned = text.strip()
+        if cleaned.startswith("```"):
+            cleaned = re.sub(r"^```(?:json)?\s*", "", cleaned, flags=re.IGNORECASE).strip()
+            cleaned = re.sub(r"\s*```$", "", cleaned).strip()
+        try:
+            parsed = json.loads(cleaned)
+        except json.JSONDecodeError:
+            start = cleaned.find("{")
+            end = cleaned.rfind("}")
+            if start >= 0 and end > start:
+                parsed = json.loads(cleaned[start : end + 1])
+            else:
+                raise
+        if not isinstance(parsed, dict):
+            raise RuntimeError("OpenCode response was not a JSON object.")
+        return parsed
+
     def _run_openai_compatible_model(self, prompt: str, schema_path: Path, *, api_key: str) -> dict[str, Any]:
-        base_url = os.environ.get("OPENCODE_BASE_URL", "https://api.moonshot.ai/v1").strip().rstrip("/")
-        model = os.environ.get("OPENCODE_MODEL", "kimi-k2.6").strip() or "kimi-k2.6"
+        base_url = (os.environ.get("MOONSHOT_URL", "").strip() or "https://api.moonshot.ai/v1").rstrip("/")
+        model = os.environ.get("MOONSHOT_MODEL", "").strip() or "kimi-k2.6"
         schema = json.loads(schema_path.read_text(encoding="utf-8"))
         endpoint = f"{base_url}/chat/completions"
 
@@ -2042,6 +2140,8 @@ class TaxTutorEngine:
             }
         return {
             "card_type": "lesson",
+            "provider_mode": "fallback",
+            "generation_backend": "local",
             "title": "Textbook-Based Lesson",
             "subtitle": "Generated from your local textbook data.",
             "intro": "This lesson is running in local textbook mode.",
@@ -2256,6 +2356,8 @@ class TaxTutorEngine:
             "chapter_number": lesson.chapter_number,
             "chapter_title": lesson.chapter_title,
             "card_type": card.get("card_type", lesson.lesson_kind).strip(),
+            "provider_mode": card.get("provider_mode", "provider").strip(),
+            "generation_backend": card.get("generation_backend", "unknown").strip(),
             "title": card.get("title", lesson.title).strip(),
             "subtitle": card.get("subtitle", f"Chapter {lesson.chapter_number}: {lesson.chapter_title}").strip(),
             "exam_day_why": card.get("exam_day_why", f"On exam day, this lesson helps you avoid traps in {lesson.chapter_title.lower()} and pick the correct rule quickly.").strip(),

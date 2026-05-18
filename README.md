@@ -29,9 +29,10 @@ Then open [http://127.0.0.1:8765](http://127.0.0.1:8765).
 - `TAX_TUTOR_DATA_ROOT`: optional absolute path for runtime data (`study_state.json`, cache, schemas)
 - `PORT`: optional HTTP port for hosted environments
 - `HOST`: optional host bind address (defaults to `0.0.0.0` when `PORT` is set, else `127.0.0.1`)
-- `OPENCODE_API_KEY`: optional OpenAI-compatible provider key (enables richer model-generated cards)
-- `OPENCODE_BASE_URL`: optional provider base URL (defaults to `https://api.moonshot.ai/v1`)
-- `OPENCODE_MODEL`: optional provider model id (defaults to `kimi-k2.6`)
+- `TAX_TUTOR_OPENCODE_MODEL`: optional OpenCode model id (defaults to `opencode/qwen3.6-plus-free`)
+- `MOONSHOT_API_KEY`: optional direct Moonshot provider key fallback
+- `MOONSHOT_URL`: optional direct Moonshot base URL fallback (defaults to `https://api.moonshot.ai/v1`)
+- `MOONSHOT_MODEL`: optional direct Moonshot model fallback (defaults to `kimi-k2.6`)
 
 Example hosted-style run:
 
