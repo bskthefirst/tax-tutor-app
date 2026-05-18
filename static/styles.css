@@ -3630,3 +3630,266 @@ body.page-mode-study .ask-card {
     grid-template-columns: 1fr;
   }
 }
+
+/* Neobrutalism override */
+:root {
+  --bg: #fbfbf9;
+  --paper: #fffef8;
+  --paper-strong: #ffffff;
+  --line: #1c293c;
+  --ink: #1c293c;
+  --muted: #5b6778;
+  --accent: #fdc800;
+  --accent-deep: #432dd7;
+  --green: #16a34a;
+  --gold: #d97706;
+  --shadow: 6px 6px 0 rgba(28, 41, 60, 0.95);
+  --shadow-soft: 3px 3px 0 rgba(28, 41, 60, 0.85);
+}
+
+body {
+  background:
+    linear-gradient(135deg, rgba(253, 200, 0, 0.12), rgba(253, 200, 0, 0) 24%),
+    linear-gradient(225deg, rgba(67, 45, 215, 0.08), rgba(67, 45, 215, 0) 26%),
+    var(--bg);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+body::before,
+body::after {
+  content: none;
+}
+
+button,
+textarea,
+input,
+select {
+  font-family: inherit;
+}
+
+h1,
+h2,
+h3,
+h4,
+.resume-title,
+.study-title-block h2,
+.dashboard-brand h1 {
+  letter-spacing: -0.02em;
+  font-weight: 900;
+}
+
+.brand-card,
+.stats-card,
+.study-card,
+.resume-card,
+.top-progress-strip,
+.hero,
+.question-card,
+.lesson-card,
+.status-strip,
+.dashboard-view-tabs,
+.sidebar-switcher-card,
+.sidebar-tab,
+.chapter-group,
+.stat-pill,
+.week-chip,
+.empty-cardlet,
+.feedback-chip,
+.flashcard-summary-preview,
+.study-next-panel,
+.flashcard-front,
+.flashcard-answer,
+.feedback-answer-card,
+.feedback-fix-block,
+.completion-screen,
+.completion-panel,
+.top-progress-meter,
+.study-surface {
+  background: #fffef8;
+  border: 3px solid var(--line);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+  backdrop-filter: none;
+}
+
+.dashboard-brand,
+.resume-card,
+.stats-card,
+.study-card,
+.lesson-card,
+.top-progress-strip,
+.status-strip {
+  box-shadow: var(--shadow);
+}
+
+.dashboard-view-tabs,
+.sidebar-switcher-card,
+.sidebar-tab,
+.mastery-objective-chip,
+.mastery-chapter-chip,
+.mini-pill,
+.action-guide-chip,
+.ask-summary-pill {
+  box-shadow: var(--shadow-soft);
+}
+
+.dashboard-view-tab,
+.sidebar-tab,
+.mastery-chapter-chip,
+.mastery-objective-chip,
+.mini-pill,
+.action-guide-chip,
+.ask-summary-pill {
+  border: 3px solid var(--line);
+  border-radius: 12px;
+}
+
+.dashboard-view-tab.is-active,
+.sidebar-tab.is-active {
+  background: var(--accent);
+  color: var(--ink);
+}
+
+.mini-pill {
+  background: var(--accent);
+  color: var(--ink);
+  animation: none;
+}
+
+.primary-button,
+.secondary-button,
+.ghost-button {
+  border: 3px solid var(--line);
+  border-radius: 12px;
+  box-shadow: var(--shadow-soft);
+}
+
+.primary-button {
+  background: var(--accent);
+  color: var(--ink);
+  animation: none;
+}
+
+.secondary-button {
+  background: var(--accent-deep);
+  color: #fff;
+}
+
+.ghost-button {
+  background: #fffef8;
+  color: var(--ink);
+}
+
+.primary-button::after,
+body::before,
+body::after {
+  content: none;
+}
+
+.primary-button:hover,
+.secondary-button:hover,
+.ghost-button:hover,
+.compact-button:hover {
+  box-shadow: 8px 8px 0 rgba(28, 41, 60, 0.95);
+}
+
+.status-strip[data-kind="error"] {
+  background: #ffe4e0;
+}
+
+.status-strip[data-kind="success"] {
+  background: #dff7e7;
+}
+
+.status-strip[data-kind="celebrate"] {
+  background: linear-gradient(135deg, #fdc800, #fff0a8);
+}
+
+.study-header,
+.card-header,
+.top-progress-meter-copy,
+.flashcard-review-head,
+.quiz-feedback-hero,
+.completion-header {
+  gap: 12px;
+}
+
+.study-header {
+  border-bottom: 3px solid var(--line);
+}
+
+.study-title-block h2::after {
+  height: 10px;
+  background: linear-gradient(90deg, var(--accent), #ff8f00, var(--accent-deep));
+  animation: none;
+}
+
+.study-card,
+.lesson-card,
+.question-card {
+  overflow: visible;
+}
+
+.study-surface,
+.lesson-screen,
+.dashboard-shell {
+  gap: 16px;
+}
+
+.source-chunk pre,
+.card-header p,
+.brand-copy,
+.lesson-subtitle,
+.study-header-copy p,
+.today-task-copy p,
+.exam-mode-card p,
+.completion-panel p,
+.feedback-answer-card p,
+.feedback-fix-block p,
+.study-next-copy p,
+.planner-copy,
+.quiz-hint {
+  color: var(--muted);
+}
+
+.study-card::-webkit-scrollbar,
+.lesson-card::-webkit-scrollbar {
+  width: 12px;
+}
+
+.study-card::-webkit-scrollbar-thumb,
+.lesson-card::-webkit-scrollbar-thumb {
+  background: var(--accent-deep);
+  border: 3px solid #fffef8;
+  border-radius: 999px;
+}
+
+.study-card::-webkit-scrollbar-track,
+.lesson-card::-webkit-scrollbar-track {
+  background: rgba(28, 41, 60, 0.08);
+}
+
+@media (max-width: 760px) {
+  .dashboard-view-tabs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .study-header,
+  .study-action-row,
+  .hero-actions,
+  .resume-actions,
+  .completion-actions,
+  .flashcard-actions,
+  .feedback-answer-grid,
+  .top-progress-shell,
+  .top-progress-meters,
+  .resume-shell,
+  .completion-header,
+  .completion-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .study-header {
+    align-items: start;
+  }
+}
