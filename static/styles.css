@@ -3634,11 +3634,11 @@ body.page-mode-study .ask-card {
 /* Neobrutalism override */
 :root {
   --bg: #fbfbf9;
-  --paper: #fffef8;
+  --paper: #fffdf4;
   --paper-strong: #ffffff;
   --line: #1c293c;
   --ink: #1c293c;
-  --muted: #5b6778;
+  --muted: #3f4e63;
   --accent: #fdc800;
   --accent-deep: #432dd7;
   --green: #16a34a;
@@ -3830,6 +3830,10 @@ body::after {
   overflow: visible;
 }
 
+body.page-mode-study .study-card {
+  background: #fffdf4;
+}
+
 .study-surface,
 .lesson-screen,
 .dashboard-shell {
@@ -3848,8 +3852,20 @@ body::after {
 .feedback-fix-block p,
 .study-next-copy p,
 .planner-copy,
-.quiz-hint {
-  color: var(--muted);
+.quiz-hint,
+body.page-mode-study .lesson-intro,
+body.page-mode-study .lesson-meta,
+body.page-mode-study .source-headings,
+body.page-mode-study .source-chunk pre {
+  color: #2f3d52;
+}
+
+body.page-mode-study .study-header-copy strong,
+body.page-mode-study .study-title-block h2,
+body.page-mode-study .lesson-card h2,
+body.page-mode-study .lesson-card h3,
+body.page-mode-study .lesson-card h4 {
+  color: var(--ink);
 }
 
 .study-card::-webkit-scrollbar,
