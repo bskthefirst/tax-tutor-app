@@ -3909,3 +3909,130 @@ body.page-mode-study .lesson-card h4 {
     align-items: start;
   }
 }
+
+/* iPhone + iPad optimization pass */
+@media (max-width: 1180px) {
+  .page-shell {
+    padding-left: max(12px, env(safe-area-inset-left));
+    padding-right: max(12px, env(safe-area-inset-right));
+    padding-bottom: max(18px, env(safe-area-inset-bottom));
+  }
+
+  .study-card,
+  .lesson-card,
+  .question-card {
+    max-height: none;
+    overflow: visible;
+  }
+
+  .dashboard-view-tabs {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .dashboard-view-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .dashboard-view-tab,
+  .primary-button,
+  .secondary-button,
+  .ghost-button,
+  .compact-button,
+  .compact-action-button,
+  .compact-panel-button,
+  .quiz-jump-chip,
+  .lesson-pill,
+  .mastery-mini-card,
+  .mastery-tile,
+  .next-step-chip {
+    min-height: 46px;
+  }
+
+  .top-progress-strip {
+    position: static;
+  }
+
+  .lesson-tabs {
+    overflow-x: auto;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(160px, 1fr);
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 4px;
+  }
+
+  .lesson-tabs > * {
+    min-width: 160px;
+  }
+
+  .study-next-panel,
+  .lesson-focus-primary,
+  .lesson-focus-actions {
+    position: static;
+  }
+}
+
+@media (max-width: 760px) {
+  body {
+    font-size: 16px;
+  }
+
+  .page-shell {
+    padding-top: max(12px, env(safe-area-inset-top));
+    padding-bottom: max(24px, env(safe-area-inset-bottom));
+  }
+
+  .brand-card,
+  .stats-card,
+  .study-card,
+  .resume-card,
+  .top-progress-strip,
+  .hero,
+  .question-card,
+  .lesson-card,
+  .status-strip {
+    border-width: 2px;
+    border-radius: 12px;
+    box-shadow: 3px 3px 0 rgba(28, 41, 60, 0.9);
+  }
+
+  .study-title-block h2 {
+    font-size: clamp(1.55rem, 7vw, 2rem);
+    line-height: 1.08;
+  }
+
+  .lesson-intro,
+  .lesson-subtitle,
+  .card-header p,
+  .quiz-hint,
+  .action-button-help {
+    font-size: 0.96rem;
+    line-height: 1.45;
+  }
+
+  .quiz-option {
+    padding: 12px 12px;
+  }
+
+  .quiz-option-badge {
+    width: 34px;
+    height: 34px;
+    font-size: 0.98rem;
+  }
+
+  .quiz-option-text {
+    font-size: 1rem;
+  }
+
+  .quiz-nav-actions {
+    position: sticky;
+    bottom: 0;
+    z-index: 8;
+    background: #fffef8;
+    border-top: 2px solid var(--line);
+    padding-top: 8px;
+    padding-bottom: max(8px, env(safe-area-inset-bottom));
+  }
+}
