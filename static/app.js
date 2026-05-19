@@ -649,6 +649,19 @@ function renderTodayAssignment(appState) {
   const assignment = appState.today_assignment;
   const current = appState.current_lesson;
   const nextLesson = (appState.up_next || []).find((lesson) => !lesson.current) || null;
+  const lessonOptions = (appState.chapters || [])
+    .flatMap((chapter) =>
+      (chapter.lessons || [])
+        .filter((lesson) => lesson.in_scope)
+        .map(
+          (lesson) => `
+            <option value="${escapeHtml(lesson.lesson_id)}">
+              Ch ${escapeHtml(chapter.chapter_number)} · L${escapeHtml(lesson.position_in_chapter)}: ${escapeHtml(lesson.title)}
+            </option>
+          `
+        )
+    )
+    .join("");
   if (!assignment?.tasks?.length) {
     todayAssignment.innerHTML = `
       <div class="empty-cardlet">
@@ -679,6 +692,23 @@ function renderTodayAssignment(appState) {
       <div class="today-time-row">
         <span class="mini-pill">${escapeHtml(assignment.estimated_minutes)} min plan</span>
       </div>
+      <article class="today-task-card lesson-picker-card">
+        <div class="today-task-copy">
+          <span class="today-task-index">#</span>
+          <div>
+            <strong>Pick Any Lesson</strong>
+            <p>Jump directly to any in-scope lesson.</p>
+          </div>
+        </div>
+        <div class="lesson-picker-row">
+          <select id="lessonPickerSelect" class="lesson-picker-select" aria-label="Choose lesson">
+            ${lessonOptions}
+          </select>
+          <button class="secondary-button compact-button" data-lesson-picker-open type="button">
+            Open Lesson
+          </button>
+        </div>
+      </article>
       <article class="today-task-card today-primary-task">
         <div class="today-primary-copy">
           <span class="today-task-index">1</span>
@@ -1898,12 +1928,12 @@ function renderQuizPanel(card, isQuizGraded) {
         <div class="quiz-command-bar">
           <span class="quiz-progress-pill">Question ${escapeHtml(questionIndex + 1)} of ${escapeHtml(totalQuestions)}</span>
           <strong>${card.card_type === "exam" ? "Exam mode" : "Lesson quiz"}</strong>
-          <p>${isQuizGraded ? "Use the jump chips to review each question." : "Pick one answer. The quiz moves to the next question automatically."}</p>
+          <p>${isQuizGraded ? "Review each question and move on." : "Pick one answer, then use Next Question."}</p>
         </div>
         <div class="quiz-flow-header">
           <div>
             <strong>${isQuizGraded ? "Review your answers" : `${answeredCount} of ${totalQuestions} answered`}</strong>
-            <p class="quiz-flow-subcopy">${isQuizGraded ? "Open each question to see exactly why it was right or wrong." : "Stay in the same flow and keep moving until the grade screen."}</p>
+            <p class="quiz-flow-subcopy">${isQuizGraded ? "See why each answer was right or wrong." : "Finish all questions, then grade once at the end."}</p>
           </div>
           <div class="quiz-flow-progress">
             <div class="mini-progress-bar">
@@ -1911,27 +1941,29 @@ function renderQuizPanel(card, isQuizGraded) {
             </div>
           </div>
         </div>
-
-        <div class="quiz-jump-list">
-          ${card.quiz_questions
-            .map((_, index) => {
-              const jumpFeedback = feedbackByQuestion.get(index + 1);
-              const jumpClass = [
-                "quiz-jump-chip",
-                index === questionIndex ? "is-active" : "",
-                draftAnswers[index] ? "is-answered" : "",
-                jumpFeedback ? `is-${String(jumpFeedback.verdict || "").toLowerCase().replaceAll(" ", "-")}` : "",
-              ]
-                .filter(Boolean)
-                .join(" ");
-              return `
-                <button class="${jumpClass}" data-quiz-jump="${index}" type="button">
-                  Q${index + 1}
-                </button>
-              `;
-            })
-            .join("")}
-        </div>
+        <details class="quiz-jump-details">
+          <summary>Jump to question</summary>
+          <div class="quiz-jump-list">
+            ${card.quiz_questions
+              .map((_, index) => {
+                const jumpFeedback = feedbackByQuestion.get(index + 1);
+                const jumpClass = [
+                  "quiz-jump-chip",
+                  index === questionIndex ? "is-active" : "",
+                  draftAnswers[index] ? "is-answered" : "",
+                  jumpFeedback ? `is-${String(jumpFeedback.verdict || "").toLowerCase().replaceAll(" ", "-")}` : "",
+                ]
+                  .filter(Boolean)
+                  .join(" ");
+                return `
+                  <button class="${jumpClass}" data-quiz-jump="${index}" type="button">
+                    Q${index + 1}
+                  </button>
+                `;
+              })
+              .join("")}
+          </div>
+        </details>
 
         <form id="quizForm" class="quiz-form ${isQuizGraded ? "is-graded" : ""}">
           ${renderQuizQuestionPanel(card, question, questionIndex, draftAnswers[questionIndex], feedbackItem, isQuizGraded)}
@@ -2901,6 +2933,17 @@ document.addEventListener("click", (event) => {
   const inlineActionButton = event.target.closest("[data-inline-action]");
   if (inlineActionButton) {
     handleActionButton(inlineActionButton.dataset.inlineAction);
+    return;
+  }
+  const lessonPickerButton = event.target.closest("[data-lesson-picker-open]");
+  if (lessonPickerButton) {
+    const lessonSelect = document.getElementById("lessonPickerSelect");
+    const lessonId = lessonSelect ? lessonSelect.value : "";
+    if (!lessonId) {
+      setStatus("Pick a lesson first.", "error");
+      return;
+    }
+    runAction("open_lesson", { lesson_id: lessonId });
     return;
   }
   const planToggle = event.target.closest("[data-plan-toggle]");

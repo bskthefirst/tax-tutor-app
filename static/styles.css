@@ -171,6 +171,54 @@ textarea {
   grid-column: 1 / -1;
 }
 
+.lesson-picker-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border: 2px solid var(--line);
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: var(--shadow-soft);
+}
+
+.lesson-picker-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.lesson-picker-select {
+  flex: 1 1 280px;
+  min-width: 0;
+  border: 2px solid var(--line);
+  border-radius: 10px;
+  background: #fffef8;
+  color: var(--ink);
+  font-weight: 700;
+  padding: 10px 12px;
+}
+
+.quiz-jump-details {
+  margin: 10px 0 4px;
+  border: 2px solid var(--line);
+  border-radius: 10px;
+  background: #fffef8;
+  padding: 6px 10px 10px;
+}
+
+.quiz-jump-details > summary {
+  cursor: pointer;
+  font-weight: 700;
+  color: var(--ink);
+  list-style: none;
+}
+
+.quiz-jump-details > summary::-webkit-details-marker {
+  display: none;
+}
+
 .dashboard-grid-secondary {
   align-items: start;
 }
