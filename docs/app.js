@@ -38,6 +38,7 @@ const questionForm = document.getElementById("questionForm");
 const questionInput = document.getElementById("questionInput");
 const teachBackButton = document.getElementById("teachBackButton");
 const statusStrip = document.getElementById("statusStrip");
+const connectionStrip = document.getElementById("connectionStrip");
 const connApi = document.getElementById("connApi");
 const connBackend = document.getElementById("connBackend");
 const connNeon = document.getElementById("connNeon");
@@ -1379,6 +1380,9 @@ function renderLayoutMode(appState) {
   document.body.classList.toggle("has-active-lesson", hasActiveLesson);
   document.body.classList.toggle("page-mode-dashboard", state.pageMode === "dashboard");
   document.body.classList.toggle("page-mode-study", state.pageMode === "study");
+  if (connectionStrip) {
+    connectionStrip.classList.toggle("hidden", state.pageMode !== "dashboard");
+  }
   if (dashboardShell) {
     dashboardShell.classList.toggle("hidden", state.pageMode === "study");
   }
