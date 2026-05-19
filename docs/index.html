@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Tax Tutor</title>
+    <link rel="stylesheet" href="./styles.css">
+  </head>
+  <body>
+    <div class="page-shell">
+      <main class="main-panel">
+        <section class="status-strip hidden" id="statusStrip"></section>
+
+        <section class="dashboard-shell" id="dashboardShell">
+          <section class="brand-card dashboard-brand">
+            <p class="eyebrow">Home</p>
+            <h1>Tax Tutor</h1>
+            <p class="brand-copy">Start here, do today’s work, and keep the lesson screen simple.</p>
+          </section>
+
+          <div class="dashboard-top-grid">
+            <section class="resume-card hidden" id="resumeCard"></section>
+            <section class="stats-card" id="statsCard"></section>
+          </div>
+
+          <nav class="dashboard-view-tabs" id="dashboardViewTabs" aria-label="Dashboard sections">
+            <button class="dashboard-view-tab is-active" data-dashboard-view="today" type="button">Today</button>
+            <button class="dashboard-view-tab" data-dashboard-view="practice" type="button">Practice</button>
+            <button class="dashboard-view-tab" data-dashboard-view="plan" type="button">Plan</button>
+            <button class="dashboard-view-tab" data-dashboard-view="course" type="button">Course</button>
+          </nav>
+
+          <section class="dashboard-view is-active" data-dashboard-panel="today">
+            <div class="dashboard-grid dashboard-grid-today">
+              <section class="study-card compact-card dashboard-card dashboard-span-2 today-card">
+                <div class="card-header">
+                  <h2>Today's Assignment</h2>
+                </div>
+                <div id="todayAssignment"></div>
+              </section>
+
+              <section class="study-card compact-card dashboard-card">
+                <div class="card-header">
+                  <h2>Due Flashcards</h2>
+                </div>
+                <div id="flashcardsPanel"></div>
+              </section>
+
+              <section class="study-card compact-card dashboard-card">
+                <div class="card-header">
+                  <h2>Recent Mistakes</h2>
+                </div>
+                <div id="mistakeSummaryPanel"></div>
+              </section>
+
+              <section class="study-card compact-card dashboard-card dashboard-span-2">
+                <div class="card-header">
+                  <h2>Chapter Mastery</h2>
+                </div>
+                <div id="masteryMap"></div>
+              </section>
+            </div>
+          </section>
+
+          <section class="dashboard-view hidden" data-dashboard-panel="practice">
+            <div class="dashboard-grid dashboard-grid-secondary">
+              <section class="study-card compact-card dashboard-card dashboard-span-2">
+                <div class="card-header">
+                  <h2>Flashcard Review</h2>
+                  <p>Do the full flashcard session here.</p>
+                </div>
+                <div id="flashcardReviewPanel"></div>
+              </section>
+
+              <section class="study-card compact-card dashboard-card">
+                <div class="card-header">
+                  <h2>Practice Center</h2>
+                  <p>Weekly review and exam drills.</p>
+                </div>
+                <div id="examCenter"></div>
+              </section>
+
+              <section class="study-card compact-card dashboard-card">
+                <div class="card-header">
+                  <h2>Mistake Notebook</h2>
+                  <p>Review what you missed and reopen the lesson.</p>
+                </div>
+                <div id="mistakeNotebook"></div>
+              </section>
+            </div>
+          </section>
+
+          <section class="dashboard-view hidden" data-dashboard-panel="plan">
+            <div class="dashboard-grid dashboard-grid-secondary">
+              <section class="study-card dashboard-card dashboard-span-2">
+                <div class="card-header">
+                  <h2>Study Plan</h2>
+                  <p>Set your chapter range and lesson pace.</p>
+                </div>
+                <div class="dashboard-tool-body">
+                  <div class="card-header nested-tool-header">
+                    <h3>Planner</h3>
+                    <button class="ghost-button compact-button" id="startOverButton" type="button">Start Over</button>
+                  </div>
+                  <p class="planner-copy">Trim the course to your exam window, then set the lesson pace you want to follow.</p>
+                  <form id="midtermForm" class="stack-form">
+                    <label class="checkbox-row">
+                      <input id="midtermEnabled" type="checkbox">
+                      <span>Midterm mode</span>
+                    </label>
+                    <div class="inline-fields">
+                      <label>
+                        <span>Start chapter</span>
+                        <input id="midtermStart" type="number" min="1" value="1">
+                      </label>
+                      <label>
+                        <span>End chapter</span>
+                        <input id="midtermEnd" type="number" min="1" value="25">
+                      </label>
+                    </div>
+                    <button class="ghost-button" type="submit">Apply Chapter Range</button>
+                  </form>
+
+                  <form id="weeklyGoalForm" class="stack-form">
+                    <label>
+                      <span>Lessons per week</span>
+                      <input id="weeklyGoalInput" type="number" min="1" max="5" value="2">
+                    </label>
+                    <button class="ghost-button" type="submit">Update Weekly Plan</button>
+                  </form>
+
+                  <form id="syncForm" class="stack-form">
+                    <label>
+                      <span>Sync code</span>
+                      <input id="syncCodeInput" type="text" placeholder="same code on phone and iPad">
+                    </label>
+                    <p class="planner-copy">Use the same code on every device to share progress through Neon.</p>
+                    <div class="inline-fields">
+                      <button class="ghost-button" type="submit">Save Sync Code</button>
+                      <button class="ghost-button" id="clearSyncCodeButton" type="button">Use This Device Only</button>
+                    </div>
+                  </form>
+
+                  <div id="weeklyPlan"></div>
+                </div>
+              </section>
+            </div>
+          </section>
+
+          <section class="dashboard-view hidden" data-dashboard-panel="course">
+            <div class="dashboard-grid dashboard-grid-secondary">
+              <section class="study-card compact-card dashboard-card">
+                <div class="card-header">
+                  <h2>Current Path</h2>
+                  <p>Where you are and what comes next.</p>
+                </div>
+                <div id="courseNavigator"></div>
+              </section>
+
+              <section class="study-card compact-card dashboard-card">
+                <div class="card-header">
+                  <h2>What To Do Next</h2>
+                  <p>Use this if you feel lost.</p>
+                </div>
+                <div id="upNextPanel"></div>
+              </section>
+
+              <section class="study-card dashboard-card dashboard-span-2">
+                <div class="card-header">
+                  <h2>Course Map</h2>
+                  <p>Jump anywhere in the textbook path.</p>
+                </div>
+                <div id="curriculum"></div>
+              </section>
+
+              <section class="study-card compact-card dashboard-card dashboard-span-2">
+                <div class="card-header">
+                  <h2>Ask If You Want</h2>
+                  <p>You can still ask anything, but you never have to invent the next step yourself.</p>
+                </div>
+                <form id="questionForm">
+                  <textarea id="questionInput" rows="3" placeholder="Example: What is a tax base?"></textarea>
+                  <div class="inline-fields">
+                    <button class="primary-button" type="submit">Answer My Question</button>
+                    <button class="ghost-button" id="teachBackButton" type="button">Grade My Teach-Back</button>
+                  </div>
+                </form>
+              </section>
+            </div>
+          </section>
+        </section>
+
+        <section class="lesson-screen hidden" id="lessonScreen">
+          <section class="top-progress-strip hidden" id="topProgressStrip"></section>
+
+          <section class="lesson-card" id="lessonCard">
+            <div class="empty-state">
+              <h3>Ready to study</h3>
+              <p>Open a lesson from the dashboard and the study view will stay intentionally minimal.</p>
+            </div>
+          </section>
+        </section>
+      </main>
+    </div>
+
+    <script src="./config.js" defer></script>
+    <script src="./app.js" defer></script>
+  </body>
+</html>

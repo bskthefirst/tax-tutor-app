@@ -26,6 +26,16 @@ except RuntimeError as exc:
 class TaxTutorHandler(BaseHTTPRequestHandler):
     server_version = "TaxTutor/0.1"
 
+    def do_OPTIONS(self) -> None:
+        parsed = urlparse(self.path)
+        if parsed.path.startswith("/api/"):
+            self.send_response(HTTPStatus.NO_CONTENT)
+            self._send_cors_headers()
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+            return
+        self.send_error(HTTPStatus.NOT_FOUND)
+
     def do_GET(self) -> None:
         parsed = urlparse(self.path)
         client_id = self.headers.get("X-TaxTutor-Client", "").strip() or None
@@ -81,6 +91,7 @@ class TaxTutorHandler(BaseHTTPRequestHandler):
     def _serve_file(self, path: Path, content_type: str) -> None:
         data = path.read_bytes()
         self.send_response(HTTPStatus.OK)
+        self._send_cors_headers()
         self.send_header("Content-Type", content_type)
         self.send_header("Content-Length", str(len(data)))
         self.end_headers()
@@ -89,10 +100,36 @@ class TaxTutorHandler(BaseHTTPRequestHandler):
     def _send_json(self, payload: dict, status: HTTPStatus = HTTPStatus.OK) -> None:
         body = json.dumps(payload).encode("utf-8")
         self.send_response(status)
+        self._send_cors_headers()
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
+
+    def _send_cors_headers(self) -> None:
+        origin = self.headers.get("Origin", "")
+        allowed = self._allowed_origin(origin)
+        if allowed:
+            self.send_header("Access-Control-Allow-Origin", allowed)
+            self.send_header("Vary", "Origin")
+            self.send_header("Access-Control-Allow-Credentials", "true")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type, X-TaxTutor-Client")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+
+    def _allowed_origin(self, origin: str) -> str | None:
+        if not origin:
+            return None
+        configured = os.environ.get("TAX_TUTOR_CORS_ORIGINS", "").strip()
+        if configured:
+            allowlist = {item.strip() for item in configured.split(",") if item.strip()}
+            if origin in allowlist:
+                return origin
+            return None
+        if origin.startswith("http://localhost:") or origin.startswith("http://127.0.0.1:"):
+            return origin
+        if origin.startswith("https://") and origin.endswith(".github.io"):
+            return origin
+        return None
 
 
 def main() -> None:
