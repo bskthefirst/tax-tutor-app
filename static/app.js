@@ -227,7 +227,8 @@ async function pollConnectionStatus() {
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const payload = await response.json();
     setConnChip(connApi, "API", "connected");
-    setConnChip(connBackend, "Render", "connected");
+    const backendLabel = payload.backend === "render" ? "Render" : "Local";
+    setConnChip(connBackend, backendLabel, "connected");
     if (!payload.neon_configured) {
       setConnChip(connNeon, "Neon", "not configured");
       return;
@@ -2945,21 +2946,27 @@ if (teachBackButton) {
   });
 }
 
-midtermForm.addEventListener("submit", (event) => {
-  event.preventDefault();
-  runAction("set_midterm_mode", {
-    enabled: midtermEnabled.checked,
-    start_chapter: Number(midtermStart.value || 1),
-    end_chapter: Number(midtermEnd.value || 25),
+if (midtermForm && midtermEnabled && midtermStart && midtermEnd) {
+  midtermForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+    runAction("set_midterm_mode", {
+      enabled: midtermEnabled.checked,
+      start_chapter: Number(midtermStart.value || 1),
+      end_chapter: Number(midtermEnd.value || 25),
+    });
   });
-});
+}
 
-weeklyGoalForm.addEventListener("submit", (event) => {
-  event.preventDefault();
-  runAction("set_weekly_goal", { weekly_goal_lessons: Number(weeklyGoalInput.value || 2) });
-});
+if (weeklyGoalForm && weeklyGoalInput) {
+  weeklyGoalForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+    runAction("set_weekly_goal", { weekly_goal_lessons: Number(weeklyGoalInput.value || 2) });
+  });
+}
 
-startOverButton.addEventListener("click", () => runAction("start_over"));
+if (startOverButton) {
+  startOverButton.addEventListener("click", () => runAction("start_over"));
+}
 
 fetchBootstrap().catch((error) => {
   setStatus(error.message || "Could not load the app.", "error");

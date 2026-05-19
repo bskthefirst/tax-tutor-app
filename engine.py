@@ -270,9 +270,10 @@ class TaxTutorEngine:
             raise RuntimeError("\n".join(message))
 
     def system_status(self) -> dict[str, Any]:
+        backend_label = "render" if os.environ.get("RENDER") or os.environ.get("PORT") else "local"
         status: dict[str, Any] = {
             "api_ok": True,
-            "backend": "render_or_local",
+            "backend": backend_label,
             "neon_configured": bool(self.database_url),
             "state_store": type(self.state_store).__name__,
             "neon_connected": False,

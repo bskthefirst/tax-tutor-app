@@ -107,6 +107,70 @@ textarea {
   align-items: start;
 }
 
+.today-secondary-card {
+  padding: 12px;
+}
+
+.today-secondary-details {
+  border: 2px solid var(--line);
+  border-radius: 12px;
+  background: #fffef8;
+  padding: 10px 12px;
+}
+
+.today-secondary-details > summary {
+  cursor: pointer;
+  font-weight: 800;
+  color: var(--ink);
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.today-secondary-details > summary::-webkit-details-marker {
+  display: none;
+}
+
+.today-secondary-details > summary::before {
+  content: "+";
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--line);
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  font-size: 0.86rem;
+  font-weight: 900;
+  background: var(--accent);
+  color: var(--ink);
+}
+
+.today-secondary-details[open] > summary::before {
+  content: "-";
+}
+
+.today-secondary-grid {
+  margin-top: 10px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.today-secondary-panel {
+  border: 2px solid var(--line);
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: var(--shadow-soft);
+  padding: 12px;
+}
+
+.today-secondary-panel-wide {
+  grid-column: 1 / -1;
+}
+
 .dashboard-grid-secondary {
   align-items: start;
 }
@@ -3606,6 +3670,14 @@ body.page-mode-study .ask-card {
   }
 
   .dashboard-span-2 {
+    grid-column: auto;
+  }
+
+  .today-secondary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .today-secondary-panel-wide {
     grid-column: auto;
   }
 }
