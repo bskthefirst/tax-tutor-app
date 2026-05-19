@@ -1951,6 +1951,78 @@ body.page-mode-study .ask-card {
   gap: 10px;
 }
 
+.lesson-mini-progress {
+  position: sticky;
+  top: 8px;
+  z-index: 8;
+  border: 2px solid var(--line);
+  border-radius: 12px;
+  background: rgba(255, 254, 248, 0.96);
+  box-shadow: var(--shadow-soft);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.lesson-mini-progress-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.lesson-mini-progress-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.lesson-focus-toggle {
+  min-height: 0;
+  border-radius: 10px;
+  padding: 6px 10px;
+  font-size: 0.78rem;
+}
+
+.lesson-mini-track {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.lesson-mini-step {
+  border: 2px solid var(--line);
+  border-radius: 999px;
+  padding: 5px 8px;
+  text-align: center;
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: var(--muted);
+  background: #ffffff;
+}
+
+.lesson-mini-step.is-active {
+  border-color: rgba(214, 66, 58, 0.45);
+  color: var(--ink);
+  background: #fff5f3;
+}
+
+.lesson-mini-step.is-complete {
+  border-color: rgba(21, 104, 95, 0.45);
+  background: #eaf8f3;
+  color: #195e57;
+}
+
+.lesson-mini-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
 .lesson-tab {
   border: 1px solid rgba(35, 51, 72, 0.08);
   background: rgba(248, 250, 253, 0.98);
@@ -4088,6 +4160,24 @@ body.page-mode-study .lesson-card h4 {
   .study-header {
     align-items: start;
   }
+
+  .lesson-mini-progress-head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .lesson-mini-progress-meta {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .lesson-mini-track {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .lesson-mini-actions {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* iPhone + iPad optimization pass */
@@ -4150,6 +4240,10 @@ body.page-mode-study .lesson-card h4 {
   .study-next-panel,
   .lesson-focus-primary,
   .lesson-focus-actions {
+    position: static;
+  }
+
+  .lesson-mini-progress {
     position: static;
   }
 }

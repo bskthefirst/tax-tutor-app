@@ -21,6 +21,7 @@ const state = {
   inlineFlashcardIndex: 0,
   inlineFlashcardLessonId: null,
   inlineFlashcardMotion: "next",
+  lessonFocusMode: true,
 };
 
 const statsCard = document.getElementById("statsCard");
@@ -64,6 +65,7 @@ const actionButtonMap = new Map(actionButtons.map((button) => [button.dataset.ac
 const LOCAL_STATE_KEY = "tax_tutor_local_state_v1";
 const CLIENT_ID_KEY = "tax_tutor_client_id_v1";
 const SYNC_CODE_KEY = "tax_tutor_sync_code_v1";
+const FOCUS_MODE_KEY = "tax_tutor_focus_mode_v1";
 const API_BASE = (window.TAX_TUTOR_API_BASE || "").replace(/\/+$/, "");
 let statusPollTimer = null;
 const syncForm = document.getElementById("syncForm");
@@ -73,6 +75,26 @@ const clearSyncCodeButton = document.getElementById("clearSyncCodeButton");
 if (syncCodeInput) {
   syncCodeInput.value = getSyncCode();
 }
+
+function loadLessonFocusMode() {
+  try {
+    const raw = (window.localStorage.getItem(FOCUS_MODE_KEY) || "").trim().toLowerCase();
+    if (!raw) return true;
+    return !["0", "false", "off", "no"].includes(raw);
+  } catch (error) {
+    return true;
+  }
+}
+
+function saveLessonFocusMode(enabled) {
+  try {
+    window.localStorage.setItem(FOCUS_MODE_KEY, enabled ? "true" : "false");
+  } catch (error) {
+    // Ignore storage failures so the study flow never blocks.
+  }
+}
+
+state.lessonFocusMode = loadLessonFocusMode();
 
 function getSyncCode() {
   try {
@@ -357,6 +379,10 @@ function ensureLessonStage(card) {
   return state.lessonStage;
 }
 
+function getLessonFlowStages() {
+  return ["learn", "example", "quiz", "review"];
+}
+
 function setLessonStage(stage) {
   if (!state.data?.last_card) return;
   if (state.quizAdvanceTimer) {
@@ -366,6 +392,14 @@ function setLessonStage(stage) {
   state.lessonStage = stage;
   state.lessonStageLessonId = state.data.last_card.lesson_id;
   renderCard(state.data.last_card);
+}
+
+function setLessonFocusMode(enabled) {
+  state.lessonFocusMode = Boolean(enabled);
+  saveLessonFocusMode(state.lessonFocusMode);
+  if (state.data?.last_card) {
+    renderCard(state.data.last_card);
+  }
 }
 
 function ensureQuizState(card) {
@@ -1380,6 +1414,7 @@ function renderLayoutMode(appState) {
   document.body.classList.toggle("has-active-lesson", hasActiveLesson);
   document.body.classList.toggle("page-mode-dashboard", state.pageMode === "dashboard");
   document.body.classList.toggle("page-mode-study", state.pageMode === "study");
+  document.body.classList.toggle("lesson-focus-mode", Boolean(state.lessonFocusMode));
   if (connectionStrip) {
     connectionStrip.classList.toggle("hidden", state.pageMode !== "dashboard");
   }
@@ -1488,6 +1523,73 @@ function renderLessonTabs(card) {
         )
         .join("")}
     </nav>
+  `;
+}
+
+function renderLessonMiniProgress(card, activeStage, isQuizGraded) {
+  const flowStages = getLessonFlowStages();
+  const currentStage = flowStages.includes(activeStage) ? activeStage : "learn";
+  const stageIndex = Math.max(0, flowStages.indexOf(currentStage));
+  const stageLabels = {
+    learn: "Learn",
+    example: "Example",
+    quiz: "Quiz",
+    review: "Review",
+  };
+  const nextStage = stageIndex < flowStages.length - 1 ? flowStages[stageIndex + 1] : null;
+  const prevStage = stageIndex > 0 ? flowStages[stageIndex - 1] : null;
+  const quizMeta = activeStage === "quiz" ? ensureQuizState(card) : null;
+  const quizProgressText = quizMeta
+    ? `Question ${quizMeta.questionIndex + 1}/${card.quiz_questions.length}`
+    : "";
+  const nextDisabled = activeStage === "quiz" && !isQuizGraded;
+
+  return `
+    <section class="lesson-mini-progress" aria-label="Lesson flow progress">
+      <div class="lesson-mini-progress-head">
+        <strong>Step ${stageIndex + 1}/${flowStages.length}: ${escapeHtml(stageLabels[currentStage])}</strong>
+        <div class="lesson-mini-progress-meta">
+          ${quizProgressText ? `<span>${escapeHtml(quizProgressText)}</span>` : ""}
+          <button class="ghost-button compact-button lesson-focus-toggle" data-toggle-focus-mode type="button">
+            ${state.lessonFocusMode ? "Focus On" : "Focus Off"}
+          </button>
+        </div>
+      </div>
+      <div class="lesson-mini-track">
+        ${flowStages
+          .map((stage, index) => {
+            const classes = [
+              "lesson-mini-step",
+              stage === currentStage ? "is-active" : "",
+              index < stageIndex ? "is-complete" : "",
+            ]
+              .filter(Boolean)
+              .join(" ");
+            return `<span class="${classes}">${escapeHtml(stageLabels[stage])}</span>`;
+          })
+          .join("")}
+      </div>
+      <div class="lesson-mini-actions">
+        <button class="ghost-button compact-panel-button" data-focus-prev-stage type="button" ${prevStage ? "" : "disabled"}>
+          <span class="action-button-title">Previous Step</span>
+        </button>
+        ${
+          stageIndex < flowStages.length - 1
+            ? `
+              <button class="secondary-button compact-panel-button" data-focus-next-stage type="button" ${
+                nextDisabled ? "disabled" : ""
+              }>
+                <span class="action-button-title">${nextDisabled ? "Grade Quiz To Continue" : `Next: ${escapeHtml(stageLabels[nextStage])}`}</span>
+              </button>
+            `
+            : `
+              <button class="primary-button compact-panel-button" data-inline-action="complete_and_continue" type="button">
+                <span class="action-button-title">Mark Done + Continue</span>
+              </button>
+            `
+        }
+      </div>
+    </section>
   `;
 }
 
@@ -2319,6 +2421,7 @@ function renderCard(card) {
   const modeBadge = providerMode === "provider" ? "Mode: provider" : "Mode: fallback";
   ensureLessonStage(card);
   const activeStage = state.lessonStage;
+  const showFocusMode = Boolean(state.lessonFocusMode);
   let stagePanel = renderLearnPanel(card);
   if (activeStage === "example") stagePanel = renderExamplePanel(card);
   if (activeStage === "quiz") stagePanel = renderQuizPanel(card, isQuizGraded);
@@ -2340,6 +2443,7 @@ function renderCard(card) {
           <span class="mini-pill">${escapeHtml(integrityBadge)}</span>
           <span class="mini-pill">${escapeHtml(modelBadge)}</span>
           <span class="mini-pill">${escapeHtml(modeBadge)}</span>
+          <span class="mini-pill">${showFocusMode ? "Focus mode" : "Classic mode"}</span>
         </div>
       </div>
 
@@ -2348,9 +2452,9 @@ function renderCard(card) {
         <p class="lesson-subtitle">${escapeHtml(card.subtitle)}</p>
       </div>
 
-      ${renderLessonTabs(card)}
+      ${showFocusMode ? renderLessonMiniProgress(card, activeStage, isQuizGraded) : renderLessonTabs(card)}
 
-      ${renderStudyActionRow(card, activeStage, isQuizGraded)}
+      ${showFocusMode ? "" : renderStudyActionRow(card, activeStage, isQuizGraded)}
 
       ${stagePanel}
     </article>
@@ -2361,6 +2465,26 @@ function renderCard(card) {
   });
   lessonCard.querySelectorAll("[data-lesson-stage-jump]").forEach((button) => {
     button.addEventListener("click", () => setLessonStage(button.dataset.lessonStageJump));
+  });
+  lessonCard.querySelectorAll("[data-focus-prev-stage]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const flowStages = getLessonFlowStages();
+      const currentIndex = flowStages.indexOf(activeStage);
+      if (currentIndex > 0) setLessonStage(flowStages[currentIndex - 1]);
+    });
+  });
+  lessonCard.querySelectorAll("[data-focus-next-stage]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const flowStages = getLessonFlowStages();
+      const currentIndex = flowStages.indexOf(activeStage);
+      if (activeStage === "quiz" && !isQuizGraded) return;
+      if (currentIndex >= 0 && currentIndex < flowStages.length - 1) {
+        setLessonStage(flowStages[currentIndex + 1]);
+      }
+    });
+  });
+  lessonCard.querySelectorAll("[data-toggle-focus-mode]").forEach((button) => {
+    button.addEventListener("click", () => setLessonFocusMode(!state.lessonFocusMode));
   });
   lessonCard.querySelectorAll("[data-inline-flashcard-nav]").forEach((button) => {
     button.addEventListener("click", () => {
