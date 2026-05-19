@@ -24,6 +24,11 @@ import certifi
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import linear_kernel
 
+try:
+    import psycopg
+except ImportError:  # pragma: no cover - optional dependency for cloud sync
+    psycopg = None
+
 
 CACHE_VERSION = "v8"
 HEADING_RE = re.compile(r"^(#{1,6})\s+(.+?)\s*$")
@@ -94,6 +99,97 @@ class Lesson:
     end_pdf_page: int | None = None
 
 
+class StateStore:
+    def load(self, client_id: str | None = None) -> dict[str, Any] | None:
+        raise NotImplementedError
+
+    def save(self, state: dict[str, Any], client_id: str | None = None) -> None:
+        raise NotImplementedError
+
+
+class FileStateStore(StateStore):
+    def __init__(self, data_root: Path, default_path: Path) -> None:
+        self.data_root = data_root
+        self.default_path = default_path
+
+    def _state_path_for_client(self, client_id: str | None = None) -> Path:
+        if not client_id:
+            return self.default_path
+        safe = "".join(ch for ch in str(client_id).lower() if ch.isalnum() or ch in {"-", "_"})
+        safe = safe[:64].strip("-_")
+        if not safe:
+            return self.default_path
+        return self.data_root / f"study_state_{safe}.json"
+
+    def load(self, client_id: str | None = None) -> dict[str, Any] | None:
+        path = self._state_path_for_client(client_id)
+        if not path.exists():
+            return None
+        return json.loads(path.read_text(encoding="utf-8"))
+
+    def save(self, state: dict[str, Any], client_id: str | None = None) -> None:
+        path = self._state_path_for_client(client_id)
+        path.write_text(json.dumps(state, indent=2), encoding="utf-8")
+
+
+class PostgresStateStore(StateStore):
+    def __init__(self, database_url: str) -> None:
+        if psycopg is None:
+            raise RuntimeError("Postgres persistence requires psycopg to be installed.")
+        self.database_url = database_url
+        self._schema_lock = threading.Lock()
+        self._schema_ready = False
+
+    def _connect(self):
+        return psycopg.connect(self.database_url, autocommit=True, connect_timeout=3)
+
+    def _ensure_schema(self) -> None:
+        if self._schema_ready:
+            return
+        with self._schema_lock:
+            if self._schema_ready:
+                return
+            with self._connect() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        """
+                        CREATE TABLE IF NOT EXISTS tax_tutor_state (
+                            client_id text PRIMARY KEY,
+                            state_json text NOT NULL,
+                            updated_at timestamptz NOT NULL DEFAULT now()
+                        )
+                        """
+                    )
+            self._schema_ready = True
+
+    def load(self, client_id: str | None = None) -> dict[str, Any] | None:
+        self._ensure_schema()
+        key = (client_id or "default").strip() or "default"
+        with self._connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT state_json FROM tax_tutor_state WHERE client_id = %s", (key,))
+                row = cur.fetchone()
+        if not row:
+            return None
+        return json.loads(row[0])
+
+    def save(self, state: dict[str, Any], client_id: str | None = None) -> None:
+        self._ensure_schema()
+        key = (client_id or "default").strip() or "default"
+        payload = json.dumps(state, ensure_ascii=False)
+        with self._connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    INSERT INTO tax_tutor_state (client_id, state_json, updated_at)
+                    VALUES (%s, %s, now())
+                    ON CONFLICT (client_id)
+                    DO UPDATE SET state_json = EXCLUDED.state_json, updated_at = now()
+                    """,
+                    (key, payload),
+                )
+
+
 class TaxTutorEngine:
     def __init__(self, app_root: Path) -> None:
         self.app_root = app_root
@@ -102,6 +198,7 @@ class TaxTutorEngine:
         self.assets_root = Path(assets_override).expanduser() if assets_override else default_assets_root
         data_override = os.environ.get("TAX_TUTOR_DATA_ROOT", "").strip()
         self.data_root = Path(data_override).expanduser() if data_override else (app_root / "data")
+        self.database_url = self._database_url_from_env()
         self.cache_root = self.data_root / "cache"
         self.model_workdir = self.data_root / "codex-empty-workdir"
         self.state_path = self.data_root / "study_state.json"
@@ -115,6 +212,8 @@ class TaxTutorEngine:
         self.cache_root.mkdir(parents=True, exist_ok=True)
         self.model_workdir.mkdir(parents=True, exist_ok=True)
         self._write_response_schemas()
+        self.file_state_store = FileStateStore(self.data_root, self.state_path)
+        self.state_store = self._build_state_store()
 
         self.system_prompt = self.prompt_path.read_text(encoding="utf-8").strip()
         self.chapter_index = json.loads(self.chapter_index_path.read_text(encoding="utf-8"))
@@ -161,6 +260,22 @@ class TaxTutorEngine:
                 *[f"- {item}" for item in missing],
             ]
             raise RuntimeError("\n".join(message))
+
+    def _database_url_from_env(self) -> str | None:
+        for env_name in ("TAX_TUTOR_DATABASE_URL", "NEON_DATABASE_URL"):
+            value = os.environ.get(env_name, "").strip()
+            if value:
+                return value
+        return None
+
+    def _build_state_store(self) -> StateStore:
+        if self.database_url:
+            try:
+                print("[tax-tutor] Using Neon/Postgres state store.", file=sys.stderr)
+                return PostgresStateStore(self.database_url)
+            except Exception as exc:  # pragma: no cover - defensive fallback
+                print(f"[tax-tutor] Neon persistence unavailable, falling back to files. {exc}", file=sys.stderr)
+        return self.file_state_store
 
     def _load_chunks(self) -> list[dict[str, Any]]:
         chunks: list[dict[str, Any]] = []
@@ -700,20 +815,15 @@ class TaxTutorEngine:
             },
         }
 
-    def _state_path_for_client(self, client_id: str | None = None) -> Path:
-        if not client_id:
-            return self.state_path
-        safe = "".join(ch for ch in str(client_id).lower() if ch.isalnum() or ch in {"-", "_"})
-        safe = safe[:64].strip("-_")
-        if not safe:
-            return self.state_path
-        return self.data_root / f"study_state_{safe}.json"
-
     def _load_state(self, client_id: str | None = None) -> dict[str, Any]:
-        path = self._state_path_for_client(client_id)
-        if not path.exists():
+        try:
+            loaded = self.state_store.load(client_id=client_id)
+        except Exception as exc:  # pragma: no cover - defensive fallback
+            if self.state_store is not self.file_state_store:
+                print(f"[tax-tutor] State store read failed, falling back to files. {exc}", file=sys.stderr)
+            loaded = self.file_state_store.load(client_id=client_id)
+        if loaded is None:
             return self._default_state()
-        loaded = json.loads(path.read_text(encoding="utf-8"))
         return self._normalize_state(loaded)
 
     def _normalize_state(self, state: dict[str, Any]) -> dict[str, Any]:
@@ -803,8 +913,12 @@ class TaxTutorEngine:
         return normalized_card
 
     def _save_state(self, state: dict[str, Any], client_id: str | None = None) -> None:
-        path = self._state_path_for_client(client_id)
-        path.write_text(json.dumps(state, indent=2), encoding="utf-8")
+        try:
+            self.state_store.save(state, client_id=client_id)
+        except Exception as exc:  # pragma: no cover - defensive fallback
+            if self.state_store is not self.file_state_store:
+                print(f"[tax-tutor] State store write failed, falling back to files. {exc}", file=sys.stderr)
+            self.file_state_store.save(state, client_id=client_id)
 
     def _now(self) -> str:
         return datetime.now(timezone.utc).isoformat()
@@ -1860,6 +1974,9 @@ class TaxTutorEngine:
         cache_path = self.cache_root / f"{cache_key}.json" if cache_key else None
         if cache_path and cache_path.exists():
             return json.loads(cache_path.read_text(encoding="utf-8"))
+
+        if os.environ.get("TAX_TUTOR_DISABLE_PROVIDER", "").strip().lower() in {"1", "true", "yes", "on"}:
+            return self._fallback_response("provider_disabled", schema_path)
 
         provider_error: str | None = None
         if shutil.which("opencode") is not None:

@@ -59,9 +59,27 @@ const actionButtons = Array.from(document.querySelectorAll("[data-action]"));
 const actionButtonMap = new Map(actionButtons.map((button) => [button.dataset.action, button]));
 const LOCAL_STATE_KEY = "tax_tutor_local_state_v1";
 const CLIENT_ID_KEY = "tax_tutor_client_id_v1";
+const SYNC_CODE_KEY = "tax_tutor_sync_code_v1";
+const syncForm = document.getElementById("syncForm");
+const syncCodeInput = document.getElementById("syncCodeInput");
+const clearSyncCodeButton = document.getElementById("clearSyncCodeButton");
+
+if (syncCodeInput) {
+  syncCodeInput.value = getSyncCode();
+}
+
+function getSyncCode() {
+  try {
+    return (window.localStorage.getItem(SYNC_CODE_KEY) || "").trim();
+  } catch (error) {
+    return "";
+  }
+}
 
 function getOrCreateClientId() {
   try {
+    const syncCode = getSyncCode();
+    if (syncCode) return `sync:${syncCode}`;
     const existing = window.localStorage.getItem(CLIENT_ID_KEY);
     if (existing) return existing;
     const generated = `client_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
@@ -69,6 +87,15 @@ function getOrCreateClientId() {
     return generated;
   } catch (error) {
     return `client_ephemeral_${Date.now().toString(36)}`;
+  }
+}
+
+function setSyncCode(value) {
+  const normalized = String(value || "").trim();
+  if (normalized) {
+    window.localStorage.setItem(SYNC_CODE_KEY, normalized);
+  } else {
+    window.localStorage.removeItem(SYNC_CODE_KEY);
   }
 }
 
@@ -2630,6 +2657,74 @@ if (askDetails) {
 if (nextUpDetails) {
   nextUpDetails.addEventListener("toggle", () => {
     state.nextUpPanelOpen = nextUpDetails.open;
+  });
+}
+
+if (syncForm && syncCodeInput) {
+  syncForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const previousCode = getSyncCode();
+    const nextCode = syncCodeInput.value.trim();
+    const snapshot = loadLocalStateSnapshot();
+    setSyncCode(nextCode);
+    try {
+      if (snapshot) {
+        const response = await apiFetch("/api/action", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "hydrate_state", state: snapshot }),
+        });
+        const data = await response.json();
+        if (!response.ok || !data?.state) {
+          throw new Error(data?.error || "Unable to save sync state.");
+        }
+      }
+      if (nextCode) {
+        setStatus("Sync code saved. Use the same code on your other devices.", "success");
+      } else if (previousCode) {
+        setStatus("This device is back on local-only progress.", "success");
+      } else {
+        setStatus("Local-only progress is still enabled.", "info");
+      }
+      window.location.reload();
+    } catch (error) {
+      if (previousCode && !nextCode) {
+        setSyncCode(previousCode);
+      } else if (previousCode && nextCode) {
+        setSyncCode(previousCode);
+      }
+      setStatus(error?.message || "Could not save sync code.", "error");
+    }
+  });
+}
+
+if (clearSyncCodeButton) {
+  clearSyncCodeButton.addEventListener("click", async () => {
+    if (!getSyncCode()) {
+      setStatus("This device is already using local-only progress.", "info");
+      return;
+    }
+    const snapshot = loadLocalStateSnapshot();
+    const previousCode = getSyncCode();
+    setSyncCode("");
+    try {
+      if (snapshot) {
+        const response = await apiFetch("/api/action", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "hydrate_state", state: snapshot }),
+        });
+        const data = await response.json();
+        if (!response.ok || !data?.state) {
+          throw new Error(data?.error || "Unable to keep local progress.");
+        }
+      }
+      setStatus("This device now uses its own local progress id.", "success");
+      window.location.reload();
+    } catch (error) {
+      setSyncCode(previousCode);
+      setStatus(error?.message || "Could not switch back to local-only mode.", "error");
+    }
   });
 }
 

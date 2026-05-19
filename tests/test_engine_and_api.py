@@ -20,6 +20,9 @@ class EngineAndApiTests(unittest.TestCase):
         cls._temp_data_dir = tempfile.TemporaryDirectory(prefix="tax-tutor-tests-")
         os.environ["TAX_TUTOR_ASSETS_ROOT"] = str(ASSETS_ROOT)
         os.environ["TAX_TUTOR_DATA_ROOT"] = cls._temp_data_dir.name
+        os.environ.pop("TAX_TUTOR_DATABASE_URL", None)
+        os.environ.pop("NEON_DATABASE_URL", None)
+        os.environ["TAX_TUTOR_DISABLE_PROVIDER"] = "1"
         os.environ.pop("PORT", None)
         os.environ.pop("HOST", None)
 
