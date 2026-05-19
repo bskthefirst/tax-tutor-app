@@ -51,6 +51,9 @@ class TaxTutorHandler(BaseHTTPRequestHandler):
         if parsed.path == "/api/plan":
             self._send_json(ENGINE.plan_payload(client_id=client_id))
             return
+        if parsed.path == "/api/status":
+            self._send_json(ENGINE.system_status())
+            return
         if parsed.path == "/healthz":
             self._send_json({"ok": True})
             return

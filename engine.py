@@ -189,6 +189,14 @@ class PostgresStateStore(StateStore):
                     (key, payload),
                 )
 
+    def ping(self) -> bool:
+        self._ensure_schema()
+        with self._connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT 1")
+                row = cur.fetchone()
+        return bool(row and row[0] == 1)
+
 
 class TaxTutorEngine:
     def __init__(self, app_root: Path) -> None:
@@ -260,6 +268,33 @@ class TaxTutorEngine:
                 *[f"- {item}" for item in missing],
             ]
             raise RuntimeError("\n".join(message))
+
+    def system_status(self) -> dict[str, Any]:
+        status: dict[str, Any] = {
+            "api_ok": True,
+            "backend": "render_or_local",
+            "neon_configured": bool(self.database_url),
+            "state_store": type(self.state_store).__name__,
+            "neon_connected": False,
+            "neon_in_use": False,
+        }
+        if not self.database_url:
+            return status
+        if isinstance(self.state_store, PostgresStateStore):
+            try:
+                status["neon_connected"] = self.state_store.ping()
+                status["neon_in_use"] = bool(status["neon_connected"])
+            except Exception:
+                status["neon_connected"] = False
+                status["neon_in_use"] = False
+            return status
+        try:
+            probe = PostgresStateStore(self.database_url)
+            status["neon_connected"] = probe.ping()
+        except Exception:
+            status["neon_connected"] = False
+        status["neon_in_use"] = False
+        return status
 
     def _database_url_from_env(self) -> str | None:
         for env_name in ("TAX_TUTOR_DATABASE_URL", "NEON_DATABASE_URL"):

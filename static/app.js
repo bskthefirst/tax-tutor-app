@@ -38,6 +38,9 @@ const questionForm = document.getElementById("questionForm");
 const questionInput = document.getElementById("questionInput");
 const teachBackButton = document.getElementById("teachBackButton");
 const statusStrip = document.getElementById("statusStrip");
+const connApi = document.getElementById("connApi");
+const connBackend = document.getElementById("connBackend");
+const connNeon = document.getElementById("connNeon");
 const startOverButton = document.getElementById("startOverButton");
 const weeklyPlan = document.getElementById("weeklyPlan");
 const flashcardsPanel = document.getElementById("flashcardsPanel");
@@ -61,6 +64,7 @@ const LOCAL_STATE_KEY = "tax_tutor_local_state_v1";
 const CLIENT_ID_KEY = "tax_tutor_client_id_v1";
 const SYNC_CODE_KEY = "tax_tutor_sync_code_v1";
 const API_BASE = (window.TAX_TUTOR_API_BASE || "").replace(/\/+$/, "");
+let statusPollTimer = null;
 const syncForm = document.getElementById("syncForm");
 const syncCodeInput = document.getElementById("syncCodeInput");
 const clearSyncCodeButton = document.getElementById("clearSyncCodeButton");
@@ -209,6 +213,45 @@ function setStatus(message, kind = "info") {
   statusStrip.classList.remove("hidden");
   statusStrip.dataset.kind = kind;
   statusStrip.textContent = message;
+}
+
+function setConnChip(node, label, stateText) {
+  if (!node) return;
+  node.textContent = `${label}: ${stateText}`;
+  node.dataset.state = String(stateText || "").toLowerCase().replace(/\s+/g, "-");
+}
+
+async function pollConnectionStatus() {
+  try {
+    const response = await apiFetch("/api/status");
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const payload = await response.json();
+    setConnChip(connApi, "API", "connected");
+    setConnChip(connBackend, "Render", "connected");
+    if (!payload.neon_configured) {
+      setConnChip(connNeon, "Neon", "not configured");
+      return;
+    }
+    if (payload.neon_connected && payload.neon_in_use) {
+      setConnChip(connNeon, "Neon", "connected");
+      return;
+    }
+    if (payload.neon_connected && !payload.neon_in_use) {
+      setConnChip(connNeon, "Neon", "reachable not in use");
+      return;
+    }
+    setConnChip(connNeon, "Neon", "disconnected");
+  } catch (error) {
+    setConnChip(connApi, "API", "disconnected");
+    setConnChip(connBackend, "Render", "disconnected");
+    setConnChip(connNeon, "Neon", "unknown");
+  }
+}
+
+function startStatusPolling() {
+  if (statusPollTimer) return;
+  pollConnectionStatus();
+  statusPollTimer = window.setInterval(pollConnectionStatus, 30000);
 }
 
 function currentCardHasQuiz(appState = state.data) {
@@ -2921,3 +2964,4 @@ startOverButton.addEventListener("click", () => runAction("start_over"));
 fetchBootstrap().catch((error) => {
   setStatus(error.message || "Could not load the app.", "error");
 });
+startStatusPolling();

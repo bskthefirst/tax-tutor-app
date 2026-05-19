@@ -3805,6 +3805,62 @@ body::after {
   background: linear-gradient(135deg, #fdc800, #fff0a8);
 }
 
+.connection-strip {
+  position: sticky;
+  bottom: 8px;
+  z-index: 15;
+  max-width: 1380px;
+  margin: 10px auto 0;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  padding: 8px 10px;
+  background: rgba(255, 254, 248, 0.95);
+  border: 2px solid var(--line);
+  border-radius: 12px;
+  box-shadow: var(--shadow-soft);
+  backdrop-filter: blur(6px);
+}
+
+.conn-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 9px;
+  border: 2px solid var(--line);
+  border-radius: 999px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  background: #fffef8;
+  color: var(--ink);
+}
+
+.conn-item::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #8a94a7;
+}
+
+.conn-item[data-state="connected"]::before {
+  background: #16a34a;
+}
+
+.conn-item[data-state="disconnected"]::before,
+.conn-item[data-state="unknown"]::before {
+  background: #dc2626;
+}
+
+.conn-item[data-state="not-configured"]::before,
+.conn-item[data-state="reachable-not-in-use"]::before,
+.conn-item[data-state="checking"]::before {
+  background: #d97706;
+}
+
 .study-header,
 .card-header,
 .top-progress-meter-copy,
@@ -4034,5 +4090,22 @@ body.page-mode-study .lesson-card h4 {
     border-top: 2px solid var(--line);
     padding-top: 8px;
     padding-bottom: max(8px, env(safe-area-inset-bottom));
+  }
+
+  .connection-strip {
+    position: fixed;
+    left: max(8px, env(safe-area-inset-left));
+    right: max(8px, env(safe-area-inset-right));
+    bottom: max(8px, env(safe-area-inset-bottom));
+    margin: 0;
+    justify-content: space-between;
+    gap: 6px;
+    padding: 7px 8px;
+  }
+
+  .conn-item {
+    font-size: 0.7rem;
+    padding: 4px 7px;
+    min-height: 28px;
   }
 }
