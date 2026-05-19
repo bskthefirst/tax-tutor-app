@@ -204,6 +204,7 @@ function escapeHtml(value) {
 }
 
 function setStatus(message, kind = "info") {
+  if (!statusStrip) return;
   if (!message) {
     statusStrip.classList.add("hidden");
     statusStrip.textContent = "";
@@ -2968,15 +2969,17 @@ document.addEventListener("click", (event) => {
   });
 });
 
-questionForm.addEventListener("submit", (event) => {
-  event.preventDefault();
-  const question = questionInput.value.trim();
-  if (!question) {
-    setStatus("Please type a question first.", "error");
-    return;
-  }
-  runAction("ask_question", { question });
-});
+if (questionForm && questionInput) {
+  questionForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const question = questionInput.value.trim();
+    if (!question) {
+      setStatus("Please type a question first.", "error");
+      return;
+    }
+    runAction("ask_question", { question });
+  });
+}
 
 if (teachBackButton) {
   teachBackButton.addEventListener("click", () => {
